@@ -1,0 +1,13 @@
+packages:
+  "framer-motion": "For premium smooth page transitions and swipeable outfit carousels"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility function to efficiently merge Tailwind CSS classes"
+
+images:
+  - path: "artifacts/fit-finder/public/images/hero-bg.png"
+    description: "Abstract, moody, cinematic lighting, very dark luxury fashion editorial background with subtle warm cream light leak, out of focus silk fabric texture"
+    aspect_ratio: "16:9"
+
+notes:
+  - "Assuming @workspace/api-client-react provides useGenerateOutfits, useSaveOutfit, useGetSavedOutfits, useGetSavedOutfit, useDeleteSavedOutfit hooks."
+  - "App uses a dark, luxury editorial theme."

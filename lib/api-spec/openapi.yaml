@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Fit Finder API - AI-powered outfit builder
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: outfits
+    description: Outfit generation and management
 paths:
   /healthz:
     get:
@@ -24,6 +26,116 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /outfits/generate:
+    post:
+      operationId: generateOutfits
+      tags: [outfits]
+      summary: Generate outfit looks
+      description: Generate multiple outfit looks from a text prompt using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateOutfitsRequest"
+      responses:
+        "200":
+          description: Generated outfit looks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateOutfitsResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /outfits/saved:
+    get:
+      operationId: getSavedOutfits
+      tags: [outfits]
+      summary: Get saved outfits
+      description: Returns all user-saved outfit collections
+      responses:
+        "200":
+          description: List of saved outfits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedOutfitsResponse"
+
+  /outfits/saved/{id}:
+    get:
+      operationId: getSavedOutfit
+      tags: [outfits]
+      summary: Get a saved outfit by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Saved outfit detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedOutfit"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteSavedOutfit
+      tags: [outfits]
+      summary: Delete a saved outfit
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /outfits/save:
+    post:
+      operationId: saveOutfit
+      tags: [outfits]
+      summary: Save an outfit look
+      description: Saves an outfit look along with user size preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveOutfitRequest"
+      responses:
+        "200":
+          description: Outfit saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedOutfit"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +146,169 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    GenerateOutfitsRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+          description: Outfit idea or inspiration text
+        numLooks:
+          type: integer
+          description: Number of distinct looks to generate (default 3)
+          default: 3
+      required:
+        - prompt
+
+    OutfitItem:
+      type: object
+      properties:
+        category:
+          type: string
+          description: "Category of item (e.g. Top, Bottom, Shoes, Bag, Jewelry, Makeup, Hair)"
+        name:
+          type: string
+          description: Specific product name
+        brand:
+          type: string
+          description: Brand or retailer name
+        description:
+          type: string
+          description: Short description of the item
+        price:
+          type: number
+          description: Approximate price in USD
+        purchaseUrl:
+          type: string
+          description: Direct URL to purchase the item
+        imageUrl:
+          type: string
+          description: Product image URL (placeholder if unavailable)
+        color:
+          type: string
+          description: Primary color of the item
+      required:
+        - category
+        - name
+        - brand
+        - description
+        - price
+        - purchaseUrl
+        - color
+
+    OutfitLook:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+          description: Name/title of this look
+        vibe:
+          type: string
+          description: Overall vibe/aesthetic of this look
+        totalCost:
+          type: number
+          description: Total cost of all items
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OutfitItem"
+        styleNotes:
+          type: string
+          description: Styling tips and notes for this look
+      required:
+        - id
+        - title
+        - vibe
+        - totalCost
+        - items
+        - styleNotes
+
+    GenerateOutfitsResponse:
+      type: object
+      properties:
+        prompt:
+          type: string
+        looks:
+          type: array
+          items:
+            $ref: "#/components/schemas/OutfitLook"
+      required:
+        - prompt
+        - looks
+
+    UserSizes:
+      type: object
+      properties:
+        top:
+          type: string
+          description: Top size (XS/S/M/L/XL/2XL)
+        bottom:
+          type: string
+          description: Bottom size (waist-inseam or XS/S/M/L/XL)
+        shoes:
+          type: string
+          description: Shoe size (US)
+        dress:
+          type: string
+          description: Dress size
+
+    SaveOutfitRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+          description: Original prompt used to generate this outfit
+        look:
+          $ref: "#/components/schemas/OutfitLook"
+        userSizes:
+          $ref: "#/components/schemas/UserSizes"
+      required:
+        - prompt
+        - look
+
+    SavedOutfit:
+      type: object
+      properties:
+        id:
+          type: integer
+        prompt:
+          type: string
+        look:
+          $ref: "#/components/schemas/OutfitLook"
+        userSizes:
+          $ref: "#/components/schemas/UserSizes"
+        savedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - prompt
+        - look
+        - savedAt
+
+    SavedOutfitsResponse:
+      type: object
+      properties:
+        outfits:
+          type: array
+          items:
+            $ref: "#/components/schemas/SavedOutfit"
+      required:
+        - outfits

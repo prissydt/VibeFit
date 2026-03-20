@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Fit Finder"
+version = "1.0.0"
+id = "artifacts/fit-finder"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25316
+
+[services.development]
+run = "pnpm --filter @workspace/fit-finder run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/fit-finder", "run", "build" ]
+publicDir = "artifacts/fit-finder/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25316"
+BASE_PATH = "/"
