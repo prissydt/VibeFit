@@ -8,8 +8,7 @@
 import type { OutfitLook } from "./outfitLook";
 import type { UserSizes } from "./userSizes";
 
-export interface SaveOutfitRequest {
-  prompt: string;
+export interface GenerateModelImageRequest {
   look: OutfitLook;
   userSizes?: UserSizes;
 }

@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Fit Finder API - AI-powered outfit builder
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 export interface HealthStatus {
   status: string;
@@ -17,54 +17,10 @@ export interface SuccessResponse {
   success: boolean;
 }
 
-export interface GenerateOutfitsRequest {
-  /** Outfit idea or inspiration text */
-  prompt: string;
-  /** Number of distinct looks to generate (default 3) */
-  numLooks?: number;
-}
-
-export interface OutfitItem {
-  /** Category of item (e.g. Top, Bottom, Shoes, Bag, Jewelry, Makeup, Hair) */
-  category: string;
-  /** Specific product name */
-  name: string;
-  /** Brand or retailer name */
-  brand: string;
-  /** Short description of the item */
-  description: string;
-  /** Approximate price in USD */
-  price: number;
-  /** Direct URL to purchase the item */
-  purchaseUrl: string;
-  /** Product image URL (placeholder if unavailable) */
-  imageUrl?: string;
-  /** Primary color of the item */
-  color: string;
-}
-
-export interface OutfitLook {
-  id: string;
-  /** Name/title of this look */
-  title: string;
-  /** Overall vibe/aesthetic of this look */
-  vibe: string;
-  /** Total cost of all items */
-  totalCost: number;
-  items: OutfitItem[];
-  /** Styling tips and notes for this look */
-  styleNotes: string;
-}
-
-export interface GenerateOutfitsResponse {
-  prompt: string;
-  looks: OutfitLook[];
-}
-
 export interface UserSizes {
   /** Top size (XS/S/M/L/XL/2XL) */
   top?: string;
-  /** Bottom size (waist-inseam or XS/S/M/L/XL) */
+  /** Bottom/pants size */
   bottom?: string;
   /** Shoe size (US) */
   shoes?: string;
@@ -72,8 +28,76 @@ export interface UserSizes {
   dress?: string;
 }
 
+/**
+ * Position of an item on the model image (percentage coordinates)
+ */
+export interface Hotspot {
+  /** X position as percentage of image width (0-100) */
+  xPct: number;
+  /** Y position as percentage of image height (0-100) */
+  yPct: number;
+}
+
+export interface GenerateOutfitsRequest {
+  /** Outfit idea or inspiration text */
+  prompt: string;
+  /** Number of distinct looks to generate (default 3) */
+  numLooks?: number;
+  userSizes?: UserSizes;
+}
+
+export interface OutfitItem {
+  /** Category: Top, Bottom, Dress, Shoes, Bag, Jewelry, Accessories, Makeup, Hair */
+  category: string;
+  name: string;
+  brand: string;
+  description: string;
+  price: number;
+  /** Direct retailer URL to purchase this item */
+  purchaseUrl: string;
+  imageUrl?: string;
+  color: string;
+}
+
+export interface ItemHotspot {
+  /** Index of the item in the look's items array */
+  itemIndex: number;
+  category: string;
+  xPct: number;
+  yPct: number;
+}
+
+export interface OutfitLook {
+  id: string;
+  title: string;
+  vibe: string;
+  totalCost: number;
+  items: OutfitItem[];
+  styleNotes: string;
+  /** Base64 model image (populated after calling model-image endpoint) */
+  modelImageB64?: string;
+  hotspots?: ItemHotspot[];
+}
+
+export interface GenerateModelImageRequest {
+  look: OutfitLook;
+  userSizes?: UserSizes;
+}
+
+export interface GenerateModelImageResponse {
+  lookId: string;
+  /** Base64-encoded PNG of model wearing the outfit */
+  modelImageB64: string;
+  hotspots: ItemHotspot[];
+}
+
+export interface GenerateOutfitsResponse {
+  prompt: string;
+  looks: OutfitLook[];
+  userSizes?: UserSizes;
+}
+
 export interface SaveOutfitRequest {
-  /** Original prompt used to generate this outfit */
   prompt: string;
   look: OutfitLook;
   userSizes?: UserSizes;

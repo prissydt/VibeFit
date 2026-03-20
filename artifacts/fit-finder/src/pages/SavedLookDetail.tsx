@@ -2,9 +2,12 @@ import { useRoute } from "wouter";
 import { useGetSavedOutfit } from "@workspace/api-client-react";
 import { Layout } from "@/components/Layout";
 import { ItemRow } from "@/components/ItemRow";
+import { ModelView } from "@/components/ModelView";
 import { formatPrice } from "@/lib/utils";
-import { Loader2, ArrowLeft, Calendar, Tag } from "lucide-react";
+import { Loader2, ArrowLeft, Calendar, Tag, ShoppingBag } from "lucide-react";
 import { Link } from "wouter";
+import { useCart } from "@/context/CartContext";
+import { Button } from "@/components/ui/button";
 
 export default function SavedLookDetail() {
   const [, params] = useRoute("/saved/:id");
@@ -13,6 +16,8 @@ export default function SavedLookDetail() {
   const { data, isLoading, isError } = useGetSavedOutfit(id, {
     query: { enabled: !!id }
   });
+
+  const { addFullOutfit } = useCart();
 
   if (isLoading) {
     return (
@@ -41,14 +46,19 @@ export default function SavedLookDetail() {
 
   return (
     <Layout>
-      <div className="w-full max-w-5xl mx-auto p-4 md:p-8">
+      <div className="w-full max-w-6xl mx-auto p-4 md:p-8">
         <Link href="/saved" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8">
           <ArrowLeft className="w-4 h-4" /> Back to Wardrobe
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+          {/* Model Column */}
+          <div className="h-[60vh] lg:h-[80vh] sticky top-28">
+             <ModelView look={look} userSizes={userSizes} />
+          </div>
+
           {/* Info Column */}
-          <div className="lg:col-span-4 space-y-8">
+          <div className="space-y-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-[10px] uppercase tracking-widest px-2 py-1 rounded bg-secondary text-muted-foreground border border-white/5">
@@ -119,17 +129,24 @@ export default function SavedLookDetail() {
                 {look.styleNotes}
               </p>
             </div>
-          </div>
 
-          {/* Items Column */}
-          <div className="lg:col-span-8 space-y-4">
-            <h3 className="text-lg font-serif px-2 mb-2">The Collection ({look.items.length} pieces)</h3>
-            <div className="glass-panel rounded-xl p-2 md:p-6">
-              <div className="space-y-2">
-                {look.items.map((item, idx) => (
-                  <ItemRow key={idx} item={item} />
-                ))}
+            <div className="pt-4 border-t border-white/10 space-y-4">
+              <h3 className="text-lg font-serif px-2 mb-2">The Collection ({look.items.length} pieces)</h3>
+              <div className="glass-panel rounded-xl p-2 md:p-6">
+                <div className="space-y-2">
+                  {look.items.map((item, idx) => (
+                    <ItemRow key={idx} item={item} lookId={look.id} lookTitle={look.title} />
+                  ))}
+                </div>
               </div>
+              
+              <Button 
+                className="w-full h-14 mt-4" 
+                onClick={() => addFullOutfit(look)}
+              >
+                <ShoppingBag className="w-5 h-5 mr-2" />
+                Add Full Look to Cart
+              </Button>
             </div>
           </div>
         </div>

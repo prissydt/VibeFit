@@ -4,11 +4,9 @@ import { useGenerateOutfits } from "@workspace/api-client-react";
 import { Layout } from "@/components/Layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Sparkles, ChevronLeft, ChevronRight, Tags } from "lucide-react";
-import { ItemRow } from "@/components/ItemRow";
-import { formatPrice } from "@/lib/utils";
-import type { OutfitLook } from "@workspace/api-client-react/src/generated/api.schemas";
-import { OrderModal } from "@/components/OrderModal";
+import { Sparkles, ChevronRight } from "lucide-react";
+import { useLocation } from "wouter";
+import { lookStore } from "@/lib/lookStore";
 
 // Pre-defined prompts for inspiration
 const SUGGESTIONS = [
@@ -20,7 +18,7 @@ const SUGGESTIONS = [
 
 function LoadingState() {
   return (
-    <div className="w-full max-w-4xl mx-auto py-12 px-4 space-y-12">
+    <div className="w-full max-w-4xl mx-auto py-12 px-4 space-y-12 flex-1 flex flex-col justify-center">
       <div className="text-center space-y-4">
         <motion.div 
           animate={{ rotate: 360 }} 
@@ -38,7 +36,7 @@ function LoadingState() {
         <div className="space-y-8 opacity-50">
           <div className="h-8 w-1/3 bg-white/10 rounded-sm" />
           <div className="grid gap-6">
-            {[1, 2, 3, 4].map(i => (
+            {[1, 2, 3].map(i => (
               <div key={i} className="flex gap-4 items-center">
                 <div className="w-12 h-12 bg-white/10 rounded-md flex-shrink-0" />
                 <div className="space-y-2 flex-1">
@@ -56,17 +54,27 @@ function LoadingState() {
 }
 
 export default function Home() {
+  const [, setLocation] = useLocation();
   const [prompt, setPrompt] = useState("");
-  const [activeLookIndex, setActiveLookIndex] = useState(0);
-  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isSizesOpen, setIsSizesOpen] = useState(false);
+  const [sizes, setSizes] = useState({
+    top: "",
+    bottom: "",
+    shoes: "",
+    dress: ""
+  });
   
   const generateMutation = useGenerateOutfits();
 
   const handleGenerate = () => {
     if (!prompt.trim()) return;
-    setActiveLookIndex(0);
     generateMutation.mutate({
-      data: { prompt, numLooks: 3 }
+      data: { prompt, numLooks: 3, userSizes: sizes }
+    }, {
+      onSuccess: (data) => {
+        lookStore.set(data);
+        setLocation("/looks");
+      }
     });
   };
 
@@ -74,19 +82,16 @@ export default function Home() {
     setPrompt(text);
   };
 
-  const looks = generateMutation.data?.looks || [];
-  const activeLook = looks[activeLookIndex];
-
   return (
     <Layout>
       <AnimatePresence mode="wait">
-        {!generateMutation.isPending && looks.length === 0 && (
+        {!generateMutation.isPending ? (
           <motion.div 
             key="search"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="flex-1 flex flex-col items-center justify-center p-4 w-full max-w-3xl mx-auto"
+            className="flex-1 flex flex-col items-center justify-center p-4 w-full max-w-3xl mx-auto my-12"
           >
             <div className="text-center mb-12 space-y-4">
               <h1 className="text-5xl md:text-7xl font-serif text-gradient">
@@ -113,7 +118,77 @@ export default function Home() {
                   }}
                 />
                 
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                {/* Sizes Form */}
+                <div className="bg-background/80 backdrop-blur-md border border-white/10 rounded-lg p-4 transition-all">
+                  <button 
+                    onClick={() => setIsSizesOpen(!isSizesOpen)}
+                    className="flex justify-between items-center w-full text-sm font-medium uppercase tracking-widest text-foreground hover:text-primary transition-colors"
+                  >
+                    My Sizes (Optional)
+                    <ChevronRight className={`w-4 h-4 transition-transform ${isSizesOpen ? 'rotate-90' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {isSizesOpen && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/5">
+                          <div className="space-y-2">
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Top Size</label>
+                            <select 
+                              value={sizes.top}
+                              onChange={(e) => setSizes(prev => ({...prev, top: e.target.value}))}
+                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none"
+                            >
+                              <option value="">Select</option>
+                              {['XS', 'S', 'M', 'L', 'XL', '2XL'].map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Bottom Size</label>
+                            <input 
+                              type="text"
+                              placeholder="e.g. 28x30 or M"
+                              value={sizes.bottom}
+                              onChange={(e) => setSizes(prev => ({...prev, bottom: e.target.value}))}
+                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Shoe Size (US)</label>
+                            <select 
+                              value={sizes.shoes}
+                              onChange={(e) => setSizes(prev => ({...prev, shoes: e.target.value}))}
+                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none"
+                            >
+                              <option value="">Select</option>
+                              {['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11'].map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Dress Size</label>
+                            <select 
+                              value={sizes.dress}
+                              onChange={(e) => setSizes(prev => ({...prev, dress: e.target.value}))}
+                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none"
+                            >
+                              <option value="">Select</option>
+                              {['0', '2', '4', '6', '8', '10', '12', '14', '16'].map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
                   <div className="flex flex-wrap gap-2">
                     {SUGGESTIONS.slice(0, 2).map((s, i) => (
                       <button 
@@ -138,141 +213,15 @@ export default function Home() {
               </div>
             </div>
           </motion.div>
-        )}
-
-        {generateMutation.isPending && (
+        ) : (
           <motion.div 
             key="loading"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 w-full"
+            className="flex-1 w-full flex flex-col"
           >
             <LoadingState />
-          </motion.div>
-        )}
-
-        {!generateMutation.isPending && looks.length > 0 && activeLook && (
-          <motion.div 
-            key="results"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex-1 w-full max-w-5xl mx-auto p-4 md:p-8 flex flex-col"
-          >
-            <div className="flex items-center justify-between mb-8">
-              <button 
-                onClick={() => generateMutation.reset()}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
-              >
-                <ChevronLeft className="w-4 h-4" /> Start Over
-              </button>
-              
-              <div className="flex items-center gap-2">
-                {looks.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setActiveLookIndex(idx)}
-                    className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                      idx === activeLookIndex 
-                        ? "bg-primary scale-125" 
-                        : "bg-white/20 hover:bg-white/40"
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              {/* Left Column: Info & Actions */}
-              <div className="lg:col-span-4 space-y-6 sticky top-28">
-                <motion.div 
-                  key={`title-${activeLookIndex}`}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="space-y-4"
-                >
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium uppercase tracking-widest">
-                    <Tags className="w-3 h-3" />
-                    {activeLook.vibe}
-                  </div>
-                  <h2 className="text-4xl md:text-5xl font-serif text-foreground leading-tight">
-                    {activeLook.title}
-                  </h2>
-                  <div className="text-3xl font-light text-primary">
-                    {formatPrice(activeLook.totalCost)}
-                  </div>
-                </motion.div>
-
-                <motion.div 
-                   key={`notes-${activeLookIndex}`}
-                   initial={{ opacity: 0 }}
-                   animate={{ opacity: 1 }}
-                   transition={{ delay: 0.2 }}
-                   className="p-5 rounded-lg border border-white/5 bg-white/5 backdrop-blur-sm"
-                >
-                  <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 border-b border-white/10 pb-2">Stylist Notes</h4>
-                  <p className="text-sm text-foreground/80 leading-relaxed">
-                    {activeLook.styleNotes}
-                  </p>
-                </motion.div>
-
-                <Button 
-                  size="lg" 
-                  className="w-full h-14 text-sm"
-                  onClick={() => setIsOrderModalOpen(true)}
-                >
-                  Configure & Save Look
-                </Button>
-              </div>
-
-              {/* Right Column: Items List */}
-              <div className="lg:col-span-8 glass-panel rounded-xl p-2 md:p-6">
-                <motion.div 
-                  key={`items-${activeLookIndex}`}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ staggerChildren: 0.1 }}
-                  className="space-y-2"
-                >
-                  <h3 className="px-4 pt-4 pb-2 text-lg font-serif">Curated Pieces</h3>
-                  {activeLook.items.map((item, idx) => (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.05 }}
-                      key={idx}
-                    >
-                      <ItemRow item={item} />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              </div>
-            </div>
-
-            {/* Navigation Arrows for desktop */}
-            <div className="hidden lg:flex fixed top-1/2 -translate-y-1/2 left-4 right-4 justify-between pointer-events-none z-10 px-8">
-              <button 
-                className={`w-12 h-12 rounded-full glass-panel flex items-center justify-center pointer-events-auto transition-transform hover:scale-110 active:scale-95 ${activeLookIndex === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-                onClick={() => setActiveLookIndex(prev => Math.max(0, prev - 1))}
-              >
-                <ChevronLeft className="w-6 h-6 text-foreground" />
-              </button>
-              <button 
-                className={`w-12 h-12 rounded-full glass-panel flex items-center justify-center pointer-events-auto transition-transform hover:scale-110 active:scale-95 ${activeLookIndex === looks.length - 1 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-                onClick={() => setActiveLookIndex(prev => Math.min(looks.length - 1, prev + 1))}
-              >
-                <ChevronRight className="w-6 h-6 text-foreground" />
-              </button>
-            </div>
-            
-            {activeLook && (
-              <OrderModal 
-                isOpen={isOrderModalOpen} 
-                onClose={() => setIsOrderModalOpen(false)} 
-                look={activeLook}
-                prompt={prompt}
-              />
-            )}
           </motion.div>
         )}
       </AnimatePresence>

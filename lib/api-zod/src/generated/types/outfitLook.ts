@@ -3,19 +3,19 @@
  * Do not edit manually.
  * Api
  * Fit Finder API - AI-powered outfit builder
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
+import type { ItemHotspot } from "./itemHotspot";
 import type { OutfitItem } from "./outfitItem";
 
 export interface OutfitLook {
   id: string;
-  /** Name/title of this look */
   title: string;
-  /** Overall vibe/aesthetic of this look */
   vibe: string;
-  /** Total cost of all items */
   totalCost: number;
   items: OutfitItem[];
-  /** Styling tips and notes for this look */
   styleNotes: string;
+  /** Base64 model image (populated after calling model-image endpoint) */
+  modelImageB64?: string;
+  hotspots?: ItemHotspot[];
 }

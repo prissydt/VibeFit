@@ -3,24 +3,18 @@
  * Do not edit manually.
  * Api
  * Fit Finder API - AI-powered outfit builder
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 
 export interface OutfitItem {
-  /** Category of item (e.g. Top, Bottom, Shoes, Bag, Jewelry, Makeup, Hair) */
+  /** Category: Top, Bottom, Dress, Shoes, Bag, Jewelry, Accessories, Makeup, Hair */
   category: string;
-  /** Specific product name */
   name: string;
-  /** Brand or retailer name */
   brand: string;
-  /** Short description of the item */
   description: string;
-  /** Approximate price in USD */
   price: number;
-  /** Direct URL to purchase the item */
+  /** Direct retailer URL to purchase this item */
   purchaseUrl: string;
-  /** Product image URL (placeholder if unavailable) */
   imageUrl?: string;
-  /** Primary color of the item */
   color: string;
 }

@@ -3,11 +3,13 @@
  * Do not edit manually.
  * Api
  * Fit Finder API - AI-powered outfit builder
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import type { OutfitLook } from "./outfitLook";
+import type { UserSizes } from "./userSizes";
 
 export interface GenerateOutfitsResponse {
   prompt: string;
   looks: OutfitLook[];
+  userSizes?: UserSizes;
 }

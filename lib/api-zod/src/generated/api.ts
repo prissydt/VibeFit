@@ -3,12 +3,11 @@
  * Do not edit manually.
  * Api
  * Fit Finder API - AI-powered outfit builder
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import * as zod from "zod";
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -16,8 +15,7 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * Generate multiple outfit looks from a text prompt using AI
- * @summary Generate outfit looks
+ * @summary Generate outfit looks with AI
  */
 export const generateOutfitsBodyNumLooksDefault = 3;
 
@@ -27,6 +25,14 @@ export const GenerateOutfitsBody = zod.object({
     .number()
     .default(generateOutfitsBodyNumLooksDefault)
     .describe("Number of distinct looks to generate (default 3)"),
+  userSizes: zod
+    .object({
+      top: zod.string().optional().describe("Top size (XS\/S\/M\/L\/XL\/2XL)"),
+      bottom: zod.string().optional().describe("Bottom\/pants size"),
+      shoes: zod.string().optional().describe("Shoe size (US)"),
+      dress: zod.string().optional().describe("Dress size"),
+    })
+    .optional(),
 });
 
 export const GenerateOutfitsResponse = zod.object({
@@ -34,35 +40,133 @@ export const GenerateOutfitsResponse = zod.object({
   looks: zod.array(
     zod.object({
       id: zod.string(),
-      title: zod.string().describe("Name\/title of this look"),
-      vibe: zod.string().describe("Overall vibe\/aesthetic of this look"),
-      totalCost: zod.number().describe("Total cost of all items"),
+      title: zod.string(),
+      vibe: zod.string(),
+      totalCost: zod.number(),
       items: zod.array(
         zod.object({
           category: zod
             .string()
             .describe(
-              "Category of item (e.g. Top, Bottom, Shoes, Bag, Jewelry, Makeup, Hair)",
+              "Category: Top, Bottom, Dress, Shoes, Bag, Jewelry, Accessories, Makeup, Hair",
             ),
-          name: zod.string().describe("Specific product name"),
-          brand: zod.string().describe("Brand or retailer name"),
-          description: zod.string().describe("Short description of the item"),
-          price: zod.number().describe("Approximate price in USD"),
-          purchaseUrl: zod.string().describe("Direct URL to purchase the item"),
-          imageUrl: zod
+          name: zod.string(),
+          brand: zod.string(),
+          description: zod.string(),
+          price: zod.number(),
+          purchaseUrl: zod
             .string()
-            .optional()
-            .describe("Product image URL (placeholder if unavailable)"),
-          color: zod.string().describe("Primary color of the item"),
+            .describe("Direct retailer URL to purchase this item"),
+          imageUrl: zod.string().optional(),
+          color: zod.string(),
         }),
       ),
-      styleNotes: zod.string().describe("Styling tips and notes for this look"),
+      styleNotes: zod.string(),
+      modelImageB64: zod
+        .string()
+        .optional()
+        .describe(
+          "Base64 model image (populated after calling model-image endpoint)",
+        ),
+      hotspots: zod
+        .array(
+          zod.object({
+            itemIndex: zod
+              .number()
+              .describe("Index of the item in the look's items array"),
+            category: zod.string(),
+            xPct: zod.number(),
+            yPct: zod.number(),
+          }),
+        )
+        .optional(),
+    }),
+  ),
+  userSizes: zod
+    .object({
+      top: zod.string().optional().describe("Top size (XS\/S\/M\/L\/XL\/2XL)"),
+      bottom: zod.string().optional().describe("Bottom\/pants size"),
+      shoes: zod.string().optional().describe("Shoe size (US)"),
+      dress: zod.string().optional().describe("Dress size"),
+    })
+    .optional(),
+});
+
+/**
+ * @summary Generate a model image for a look
+ */
+export const GenerateModelImageBody = zod.object({
+  look: zod.object({
+    id: zod.string(),
+    title: zod.string(),
+    vibe: zod.string(),
+    totalCost: zod.number(),
+    items: zod.array(
+      zod.object({
+        category: zod
+          .string()
+          .describe(
+            "Category: Top, Bottom, Dress, Shoes, Bag, Jewelry, Accessories, Makeup, Hair",
+          ),
+        name: zod.string(),
+        brand: zod.string(),
+        description: zod.string(),
+        price: zod.number(),
+        purchaseUrl: zod
+          .string()
+          .describe("Direct retailer URL to purchase this item"),
+        imageUrl: zod.string().optional(),
+        color: zod.string(),
+      }),
+    ),
+    styleNotes: zod.string(),
+    modelImageB64: zod
+      .string()
+      .optional()
+      .describe(
+        "Base64 model image (populated after calling model-image endpoint)",
+      ),
+    hotspots: zod
+      .array(
+        zod.object({
+          itemIndex: zod
+            .number()
+            .describe("Index of the item in the look's items array"),
+          category: zod.string(),
+          xPct: zod.number(),
+          yPct: zod.number(),
+        }),
+      )
+      .optional(),
+  }),
+  userSizes: zod
+    .object({
+      top: zod.string().optional().describe("Top size (XS\/S\/M\/L\/XL\/2XL)"),
+      bottom: zod.string().optional().describe("Bottom\/pants size"),
+      shoes: zod.string().optional().describe("Shoe size (US)"),
+      dress: zod.string().optional().describe("Dress size"),
+    })
+    .optional(),
+});
+
+export const GenerateModelImageResponse = zod.object({
+  lookId: zod.string(),
+  modelImageB64: zod
+    .string()
+    .describe("Base64-encoded PNG of model wearing the outfit"),
+  hotspots: zod.array(
+    zod.object({
+      itemIndex: zod
+        .number()
+        .describe("Index of the item in the look's items array"),
+      category: zod.string(),
+      xPct: zod.number(),
+      yPct: zod.number(),
     }),
   ),
 });
 
 /**
- * Returns all user-saved outfit collections
  * @summary Get saved outfits
  */
 export const GetSavedOutfitsResponse = zod.object({
@@ -72,33 +176,46 @@ export const GetSavedOutfitsResponse = zod.object({
       prompt: zod.string(),
       look: zod.object({
         id: zod.string(),
-        title: zod.string().describe("Name\/title of this look"),
-        vibe: zod.string().describe("Overall vibe\/aesthetic of this look"),
-        totalCost: zod.number().describe("Total cost of all items"),
+        title: zod.string(),
+        vibe: zod.string(),
+        totalCost: zod.number(),
         items: zod.array(
           zod.object({
             category: zod
               .string()
               .describe(
-                "Category of item (e.g. Top, Bottom, Shoes, Bag, Jewelry, Makeup, Hair)",
+                "Category: Top, Bottom, Dress, Shoes, Bag, Jewelry, Accessories, Makeup, Hair",
               ),
-            name: zod.string().describe("Specific product name"),
-            brand: zod.string().describe("Brand or retailer name"),
-            description: zod.string().describe("Short description of the item"),
-            price: zod.number().describe("Approximate price in USD"),
+            name: zod.string(),
+            brand: zod.string(),
+            description: zod.string(),
+            price: zod.number(),
             purchaseUrl: zod
               .string()
-              .describe("Direct URL to purchase the item"),
-            imageUrl: zod
-              .string()
-              .optional()
-              .describe("Product image URL (placeholder if unavailable)"),
-            color: zod.string().describe("Primary color of the item"),
+              .describe("Direct retailer URL to purchase this item"),
+            imageUrl: zod.string().optional(),
+            color: zod.string(),
           }),
         ),
-        styleNotes: zod
+        styleNotes: zod.string(),
+        modelImageB64: zod
           .string()
-          .describe("Styling tips and notes for this look"),
+          .optional()
+          .describe(
+            "Base64 model image (populated after calling model-image endpoint)",
+          ),
+        hotspots: zod
+          .array(
+            zod.object({
+              itemIndex: zod
+                .number()
+                .describe("Index of the item in the look's items array"),
+              category: zod.string(),
+              xPct: zod.number(),
+              yPct: zod.number(),
+            }),
+          )
+          .optional(),
       }),
       userSizes: zod
         .object({
@@ -106,10 +223,7 @@ export const GetSavedOutfitsResponse = zod.object({
             .string()
             .optional()
             .describe("Top size (XS\/S\/M\/L\/XL\/2XL)"),
-          bottom: zod
-            .string()
-            .optional()
-            .describe("Bottom size (waist-inseam or XS\/S\/M\/L\/XL)"),
+          bottom: zod.string().optional().describe("Bottom\/pants size"),
           shoes: zod.string().optional().describe("Shoe size (US)"),
           dress: zod.string().optional().describe("Dress size"),
         })
@@ -131,37 +245,51 @@ export const GetSavedOutfitResponse = zod.object({
   prompt: zod.string(),
   look: zod.object({
     id: zod.string(),
-    title: zod.string().describe("Name\/title of this look"),
-    vibe: zod.string().describe("Overall vibe\/aesthetic of this look"),
-    totalCost: zod.number().describe("Total cost of all items"),
+    title: zod.string(),
+    vibe: zod.string(),
+    totalCost: zod.number(),
     items: zod.array(
       zod.object({
         category: zod
           .string()
           .describe(
-            "Category of item (e.g. Top, Bottom, Shoes, Bag, Jewelry, Makeup, Hair)",
+            "Category: Top, Bottom, Dress, Shoes, Bag, Jewelry, Accessories, Makeup, Hair",
           ),
-        name: zod.string().describe("Specific product name"),
-        brand: zod.string().describe("Brand or retailer name"),
-        description: zod.string().describe("Short description of the item"),
-        price: zod.number().describe("Approximate price in USD"),
-        purchaseUrl: zod.string().describe("Direct URL to purchase the item"),
-        imageUrl: zod
+        name: zod.string(),
+        brand: zod.string(),
+        description: zod.string(),
+        price: zod.number(),
+        purchaseUrl: zod
           .string()
-          .optional()
-          .describe("Product image URL (placeholder if unavailable)"),
-        color: zod.string().describe("Primary color of the item"),
+          .describe("Direct retailer URL to purchase this item"),
+        imageUrl: zod.string().optional(),
+        color: zod.string(),
       }),
     ),
-    styleNotes: zod.string().describe("Styling tips and notes for this look"),
+    styleNotes: zod.string(),
+    modelImageB64: zod
+      .string()
+      .optional()
+      .describe(
+        "Base64 model image (populated after calling model-image endpoint)",
+      ),
+    hotspots: zod
+      .array(
+        zod.object({
+          itemIndex: zod
+            .number()
+            .describe("Index of the item in the look's items array"),
+          category: zod.string(),
+          xPct: zod.number(),
+          yPct: zod.number(),
+        }),
+      )
+      .optional(),
   }),
   userSizes: zod
     .object({
       top: zod.string().optional().describe("Top size (XS\/S\/M\/L\/XL\/2XL)"),
-      bottom: zod
-        .string()
-        .optional()
-        .describe("Bottom size (waist-inseam or XS\/S\/M\/L\/XL)"),
+      bottom: zod.string().optional().describe("Bottom\/pants size"),
       shoes: zod.string().optional().describe("Shoe size (US)"),
       dress: zod.string().optional().describe("Dress size"),
     })
@@ -181,44 +309,57 @@ export const DeleteSavedOutfitResponse = zod.object({
 });
 
 /**
- * Saves an outfit look along with user size preferences
  * @summary Save an outfit look
  */
 export const SaveOutfitBody = zod.object({
-  prompt: zod.string().describe("Original prompt used to generate this outfit"),
+  prompt: zod.string(),
   look: zod.object({
     id: zod.string(),
-    title: zod.string().describe("Name\/title of this look"),
-    vibe: zod.string().describe("Overall vibe\/aesthetic of this look"),
-    totalCost: zod.number().describe("Total cost of all items"),
+    title: zod.string(),
+    vibe: zod.string(),
+    totalCost: zod.number(),
     items: zod.array(
       zod.object({
         category: zod
           .string()
           .describe(
-            "Category of item (e.g. Top, Bottom, Shoes, Bag, Jewelry, Makeup, Hair)",
+            "Category: Top, Bottom, Dress, Shoes, Bag, Jewelry, Accessories, Makeup, Hair",
           ),
-        name: zod.string().describe("Specific product name"),
-        brand: zod.string().describe("Brand or retailer name"),
-        description: zod.string().describe("Short description of the item"),
-        price: zod.number().describe("Approximate price in USD"),
-        purchaseUrl: zod.string().describe("Direct URL to purchase the item"),
-        imageUrl: zod
+        name: zod.string(),
+        brand: zod.string(),
+        description: zod.string(),
+        price: zod.number(),
+        purchaseUrl: zod
           .string()
-          .optional()
-          .describe("Product image URL (placeholder if unavailable)"),
-        color: zod.string().describe("Primary color of the item"),
+          .describe("Direct retailer URL to purchase this item"),
+        imageUrl: zod.string().optional(),
+        color: zod.string(),
       }),
     ),
-    styleNotes: zod.string().describe("Styling tips and notes for this look"),
+    styleNotes: zod.string(),
+    modelImageB64: zod
+      .string()
+      .optional()
+      .describe(
+        "Base64 model image (populated after calling model-image endpoint)",
+      ),
+    hotspots: zod
+      .array(
+        zod.object({
+          itemIndex: zod
+            .number()
+            .describe("Index of the item in the look's items array"),
+          category: zod.string(),
+          xPct: zod.number(),
+          yPct: zod.number(),
+        }),
+      )
+      .optional(),
   }),
   userSizes: zod
     .object({
       top: zod.string().optional().describe("Top size (XS\/S\/M\/L\/XL\/2XL)"),
-      bottom: zod
-        .string()
-        .optional()
-        .describe("Bottom size (waist-inseam or XS\/S\/M\/L\/XL)"),
+      bottom: zod.string().optional().describe("Bottom\/pants size"),
       shoes: zod.string().optional().describe("Shoe size (US)"),
       dress: zod.string().optional().describe("Dress size"),
     })
@@ -230,37 +371,51 @@ export const SaveOutfitResponse = zod.object({
   prompt: zod.string(),
   look: zod.object({
     id: zod.string(),
-    title: zod.string().describe("Name\/title of this look"),
-    vibe: zod.string().describe("Overall vibe\/aesthetic of this look"),
-    totalCost: zod.number().describe("Total cost of all items"),
+    title: zod.string(),
+    vibe: zod.string(),
+    totalCost: zod.number(),
     items: zod.array(
       zod.object({
         category: zod
           .string()
           .describe(
-            "Category of item (e.g. Top, Bottom, Shoes, Bag, Jewelry, Makeup, Hair)",
+            "Category: Top, Bottom, Dress, Shoes, Bag, Jewelry, Accessories, Makeup, Hair",
           ),
-        name: zod.string().describe("Specific product name"),
-        brand: zod.string().describe("Brand or retailer name"),
-        description: zod.string().describe("Short description of the item"),
-        price: zod.number().describe("Approximate price in USD"),
-        purchaseUrl: zod.string().describe("Direct URL to purchase the item"),
-        imageUrl: zod
+        name: zod.string(),
+        brand: zod.string(),
+        description: zod.string(),
+        price: zod.number(),
+        purchaseUrl: zod
           .string()
-          .optional()
-          .describe("Product image URL (placeholder if unavailable)"),
-        color: zod.string().describe("Primary color of the item"),
+          .describe("Direct retailer URL to purchase this item"),
+        imageUrl: zod.string().optional(),
+        color: zod.string(),
       }),
     ),
-    styleNotes: zod.string().describe("Styling tips and notes for this look"),
+    styleNotes: zod.string(),
+    modelImageB64: zod
+      .string()
+      .optional()
+      .describe(
+        "Base64 model image (populated after calling model-image endpoint)",
+      ),
+    hotspots: zod
+      .array(
+        zod.object({
+          itemIndex: zod
+            .number()
+            .describe("Index of the item in the look's items array"),
+          category: zod.string(),
+          xPct: zod.number(),
+          yPct: zod.number(),
+        }),
+      )
+      .optional(),
   }),
   userSizes: zod
     .object({
       top: zod.string().optional().describe("Top size (XS\/S\/M\/L\/XL\/2XL)"),
-      bottom: zod
-        .string()
-        .optional()
-        .describe("Bottom size (waist-inseam or XS\/S\/M\/L\/XL)"),
+      bottom: zod.string().optional().describe("Bottom\/pants size"),
       shoes: zod.string().optional().describe("Shoe size (US)"),
       dress: zod.string().optional().describe("Dress size"),
     })

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { OutfitItem } from "@workspace/api-client-react/src/generated/api.schemas";
 import { formatPrice } from "@/lib/utils";
+import { useCart } from "@/context/CartContext";
 
 const CategoryIcon = ({ category, className }: { category: string, className?: string }) => {
   const cat = category.toLowerCase();
@@ -24,7 +25,15 @@ const CategoryIcon = ({ category, className }: { category: string, className?: s
   return <Type className={className} />;
 };
 
-export function ItemRow({ item }: { item: OutfitItem }) {
+interface ItemRowProps {
+  item: OutfitItem;
+  lookId?: string;
+  lookTitle?: string;
+}
+
+export function ItemRow({ item, lookId = "unknown", lookTitle = "Unknown Look" }: ItemRowProps) {
+  const { addItem } = useCart();
+
   return (
     <div className="group relative flex items-start gap-4 p-4 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all duration-300">
       <div className="flex-shrink-0 w-12 h-12 rounded-md bg-secondary/50 flex items-center justify-center border border-white/5 group-hover:bg-primary/10 transition-colors">
@@ -57,7 +66,13 @@ export function ItemRow({ item }: { item: OutfitItem }) {
         )}
       </div>
 
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+      <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 flex items-center gap-2">
+        <button 
+          onClick={() => addItem(lookId, lookTitle, item)}
+          className="h-10 px-4 rounded-full bg-white/5 text-foreground hover:bg-white/10 flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all text-xs font-medium uppercase tracking-wider border border-white/10 backdrop-blur-md"
+        >
+          + Cart
+        </button>
         <button 
           onClick={() => window.open(item.purchaseUrl, '_blank')}
           className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-transform"

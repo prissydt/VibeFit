@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Fit Finder API - AI-powered outfit builder
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -18,6 +18,8 @@ import type {
 
 import type {
   ErrorResponse,
+  GenerateModelImageRequest,
+  GenerateModelImageResponse,
   GenerateOutfitsRequest,
   GenerateOutfitsResponse,
   HealthStatus,
@@ -37,7 +39,6 @@ type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const getHealthCheckUrl = () => {
@@ -113,8 +114,7 @@ export function useHealthCheck<
 }
 
 /**
- * Generate multiple outfit looks from a text prompt using AI
- * @summary Generate outfit looks
+ * @summary Generate outfit looks with AI
  */
 export const getGenerateOutfitsUrl = () => {
   return `/api/outfits/generate`;
@@ -177,7 +177,7 @@ export type GenerateOutfitsMutationBody = BodyType<GenerateOutfitsRequest>;
 export type GenerateOutfitsMutationError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Generate outfit looks
+ * @summary Generate outfit looks with AI
  */
 export const useGenerateOutfits = <
   TError = ErrorType<ErrorResponse>,
@@ -200,7 +200,93 @@ export const useGenerateOutfits = <
 };
 
 /**
- * Returns all user-saved outfit collections
+ * @summary Generate a model image for a look
+ */
+export const getGenerateModelImageUrl = () => {
+  return `/api/outfits/model-image`;
+};
+
+export const generateModelImage = async (
+  generateModelImageRequest: GenerateModelImageRequest,
+  options?: RequestInit,
+): Promise<GenerateModelImageResponse> => {
+  return customFetch<GenerateModelImageResponse>(getGenerateModelImageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(generateModelImageRequest),
+  });
+};
+
+export const getGenerateModelImageMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateModelImage>>,
+    TError,
+    { data: BodyType<GenerateModelImageRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateModelImage>>,
+  TError,
+  { data: BodyType<GenerateModelImageRequest> },
+  TContext
+> => {
+  const mutationKey = ["generateModelImage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateModelImage>>,
+    { data: BodyType<GenerateModelImageRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateModelImage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateModelImageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateModelImage>>
+>;
+export type GenerateModelImageMutationBody =
+  BodyType<GenerateModelImageRequest>;
+export type GenerateModelImageMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Generate a model image for a look
+ */
+export const useGenerateModelImage = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateModelImage>>,
+    TError,
+    { data: BodyType<GenerateModelImageRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateModelImage>>,
+  TError,
+  { data: BodyType<GenerateModelImageRequest> },
+  TContext
+> => {
+  return useMutation(getGenerateModelImageMutationOptions(options));
+};
+
+/**
  * @summary Get saved outfits
  */
 export const getGetSavedOutfitsUrl = () => {
@@ -447,7 +533,6 @@ export const useDeleteSavedOutfit = <
 };
 
 /**
- * Saves an outfit look along with user size preferences
  * @summary Save an outfit look
  */
 export const getSaveOutfitUrl = () => {

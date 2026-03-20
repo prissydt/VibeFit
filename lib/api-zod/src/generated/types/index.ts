@@ -3,13 +3,17 @@
  * Do not edit manually.
  * Api
  * Fit Finder API - AI-powered outfit builder
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 
 export * from "./errorResponse";
+export * from "./generateModelImageRequest";
+export * from "./generateModelImageResponse";
 export * from "./generateOutfitsRequest";
 export * from "./generateOutfitsResponse";
 export * from "./healthStatus";
+export * from "./hotspot";
+export * from "./itemHotspot";
 export * from "./outfitItem";
 export * from "./outfitLook";
 export * from "./savedOutfit";

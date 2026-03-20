@@ -3,7 +3,7 @@ import { Layout } from "@/components/Layout";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { formatPrice } from "@/lib/utils";
-import { Trash2, ArrowRight, Loader2, BookmarkX } from "lucide-react";
+import { Trash2, ArrowRight, Loader2, BookmarkX, Image as ImageIcon } from "lucide-react";
 
 export default function SavedLooks() {
   const { data, isLoading, refetch } = useGetSavedOutfits();
@@ -49,23 +49,36 @@ export default function SavedLooks() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.1 }}
-                  className="group block h-full glass-panel rounded-xl overflow-hidden hover:border-primary/30 transition-all duration-500 hover:-translate-y-1"
+                  className="group block h-full glass-panel rounded-xl overflow-hidden hover:border-primary/30 transition-all duration-500 hover:-translate-y-1 flex flex-col"
                 >
-                  <div className="p-6 h-full flex flex-col">
-                    <div className="flex justify-between items-start mb-4">
-                      <span className="text-[10px] uppercase tracking-widest px-2 py-1 rounded bg-secondary text-muted-foreground border border-white/5">
+                  <div className="h-48 w-full relative bg-secondary/50 overflow-hidden">
+                    {saved.look.modelImageB64 ? (
+                      <img 
+                        src={`data:image/png;base64,${saved.look.modelImageB64}`} 
+                        alt={saved.look.title} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center opacity-20 group-hover:opacity-40 transition-opacity">
+                        <ImageIcon className="w-12 h-12" />
+                      </div>
+                    )}
+                    <div className="absolute top-4 left-4">
+                      <span className="text-[10px] uppercase tracking-widest px-2 py-1 rounded bg-black/60 backdrop-blur-sm text-white border border-white/10">
                         {saved.look.vibe}
                       </span>
-                      <button 
-                        onClick={(e) => handleDelete(saved.id, e)}
-                        className="text-muted-foreground hover:text-destructive transition-colors p-1"
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </div>
-
-                    <h3 className="text-2xl font-serif text-foreground mb-1 group-hover:text-primary transition-colors">
+                    <button 
+                      onClick={(e) => handleDelete(saved.id, e)}
+                      className="absolute top-4 right-4 p-2 rounded-full bg-black/60 backdrop-blur-sm text-white/70 hover:text-destructive hover:bg-black/80 transition-colors border border-white/10"
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="p-6 flex-1 flex flex-col">
+                    <h3 className="text-2xl font-serif text-foreground mb-1 group-hover:text-primary transition-colors line-clamp-1">
                       {saved.look.title}
                     </h3>
                     <p className="text-xs text-muted-foreground line-clamp-2 mb-6 flex-1">

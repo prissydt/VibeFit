@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
+  version: 0.2.0
   description: Fit Finder API - AI-powered outfit builder
 servers:
   - url: /api
@@ -18,7 +18,6 @@ paths:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -31,8 +30,7 @@ paths:
     post:
       operationId: generateOutfits
       tags: [outfits]
-      summary: Generate outfit looks
-      description: Generate multiple outfit looks from a text prompt using AI
+      summary: Generate outfit looks with AI
       requestBody:
         required: true
         content:
@@ -59,12 +57,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /outfits/model-image:
+    post:
+      operationId: generateModelImage
+      tags: [outfits]
+      summary: Generate a model image for a look
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateModelImageRequest"
+      responses:
+        "200":
+          description: Generated model image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateModelImageResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /outfits/saved:
     get:
       operationId: getSavedOutfits
       tags: [outfits]
       summary: Get saved outfits
-      description: Returns all user-saved outfit collections
       responses:
         "200":
           description: List of saved outfits
@@ -121,7 +143,6 @@ paths:
       operationId: saveOutfit
       tags: [outfits]
       summary: Save an outfit look
-      description: Saves an outfit look along with user size preferences
       requestBody:
         required: true
         content:
@@ -162,6 +183,36 @@ components:
       required:
         - success
 
+    UserSizes:
+      type: object
+      properties:
+        top:
+          type: string
+          description: Top size (XS/S/M/L/XL/2XL)
+        bottom:
+          type: string
+          description: Bottom/pants size
+        shoes:
+          type: string
+          description: Shoe size (US)
+        dress:
+          type: string
+          description: Dress size
+
+    Hotspot:
+      type: object
+      description: Position of an item on the model image (percentage coordinates)
+      properties:
+        xPct:
+          type: number
+          description: X position as percentage of image width (0-100)
+        yPct:
+          type: number
+          description: Y position as percentage of image height (0-100)
+      required:
+        - xPct
+        - yPct
+
     GenerateOutfitsRequest:
       type: object
       properties:
@@ -172,36 +223,77 @@ components:
           type: integer
           description: Number of distinct looks to generate (default 3)
           default: 3
+        userSizes:
+          $ref: "#/components/schemas/UserSizes"
       required:
         - prompt
+
+    GenerateModelImageRequest:
+      type: object
+      properties:
+        look:
+          $ref: "#/components/schemas/OutfitLook"
+        userSizes:
+          $ref: "#/components/schemas/UserSizes"
+      required:
+        - look
+
+    GenerateModelImageResponse:
+      type: object
+      properties:
+        lookId:
+          type: string
+        modelImageB64:
+          type: string
+          description: Base64-encoded PNG of model wearing the outfit
+        hotspots:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemHotspot"
+      required:
+        - lookId
+        - modelImageB64
+        - hotspots
+
+    ItemHotspot:
+      type: object
+      properties:
+        itemIndex:
+          type: integer
+          description: Index of the item in the look's items array
+        category:
+          type: string
+        xPct:
+          type: number
+        yPct:
+          type: number
+      required:
+        - itemIndex
+        - category
+        - xPct
+        - yPct
 
     OutfitItem:
       type: object
       properties:
         category:
           type: string
-          description: "Category of item (e.g. Top, Bottom, Shoes, Bag, Jewelry, Makeup, Hair)"
+          description: "Category: Top, Bottom, Dress, Shoes, Bag, Jewelry, Accessories, Makeup, Hair"
         name:
           type: string
-          description: Specific product name
         brand:
           type: string
-          description: Brand or retailer name
         description:
           type: string
-          description: Short description of the item
         price:
           type: number
-          description: Approximate price in USD
         purchaseUrl:
           type: string
-          description: Direct URL to purchase the item
+          description: Direct retailer URL to purchase this item
         imageUrl:
           type: string
-          description: Product image URL (placeholder if unavailable)
         color:
           type: string
-          description: Primary color of the item
       required:
         - category
         - name
@@ -218,20 +310,23 @@ components:
           type: string
         title:
           type: string
-          description: Name/title of this look
         vibe:
           type: string
-          description: Overall vibe/aesthetic of this look
         totalCost:
           type: number
-          description: Total cost of all items
         items:
           type: array
           items:
             $ref: "#/components/schemas/OutfitItem"
         styleNotes:
           type: string
-          description: Styling tips and notes for this look
+        modelImageB64:
+          type: string
+          description: Base64 model image (populated after calling model-image endpoint)
+        hotspots:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemHotspot"
       required:
         - id
         - title
@@ -249,32 +344,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/OutfitLook"
+        userSizes:
+          $ref: "#/components/schemas/UserSizes"
       required:
         - prompt
         - looks
-
-    UserSizes:
-      type: object
-      properties:
-        top:
-          type: string
-          description: Top size (XS/S/M/L/XL/2XL)
-        bottom:
-          type: string
-          description: Bottom size (waist-inseam or XS/S/M/L/XL)
-        shoes:
-          type: string
-          description: Shoe size (US)
-        dress:
-          type: string
-          description: Dress size
 
     SaveOutfitRequest:
       type: object
       properties:
         prompt:
           type: string
-          description: Original prompt used to generate this outfit
         look:
           $ref: "#/components/schemas/OutfitLook"
         userSizes:

@@ -7,6 +7,8 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import SavedLooks from "@/pages/SavedLooks";
 import SavedLookDetail from "@/pages/SavedLookDetail";
+import LooksPage from "@/pages/LooksPage";
+import { CartProvider } from "@/context/CartContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,6 +23,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/looks" component={LooksPage} />
       <Route path="/saved" component={SavedLooks} />
       <Route path="/saved/:id" component={SavedLookDetail} />
       <Route component={NotFound} />
@@ -30,14 +33,16 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <CartProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </CartProvider>
   );
 }
 

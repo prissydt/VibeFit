@@ -3,13 +3,13 @@
  * Do not edit manually.
  * Api
  * Fit Finder API - AI-powered outfit builder
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 
 export interface UserSizes {
   /** Top size (XS/S/M/L/XL/2XL) */
   top?: string;
-  /** Bottom size (waist-inseam or XS/S/M/L/XL) */
+  /** Bottom/pants size */
   bottom?: string;
   /** Shoe size (US) */
   shoes?: string;
