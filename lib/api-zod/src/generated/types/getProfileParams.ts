@@ -5,8 +5,7 @@
  * Fit Finder API
  * OpenAPI spec version: 0.3.0
  */
-import type { SavedOutfit } from "./savedOutfit";
 
-export interface SavedOutfitsResponse {
-  outfits: SavedOutfit[];
-}
+export type GetProfileParams = {
+  profileId: string;
+};

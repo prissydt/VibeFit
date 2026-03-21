@@ -13,17 +13,17 @@ import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-// Canonical body-region hotspot positions as percentage of image (x%, y%)
-// These map categories to approximate body positions on a fashion model photo
-function getHotspotsForLook(items: Array<{ category: string }>) {
+type ItemWithCategory = { category: string; price?: number };
+
+function getHotspotsForLook(items: ItemWithCategory[]) {
   const REGION_MAP: Record<string, { xPct: number; yPct: number }> = {
-    "Hair":        { xPct: 50, yPct: 7 },
-    "Makeup":      { xPct: 50, yPct: 14 },
+    "Hair":        { xPct: 50, yPct: 6  },
+    "Makeup":      { xPct: 53, yPct: 13 },
     "Jewelry":     { xPct: 50, yPct: 22 },
-    "Accessories": { xPct: 80, yPct: 30 },
-    "Top":         { xPct: 50, yPct: 32 },
-    "Dress":       { xPct: 50, yPct: 45 },
-    "Bag":         { xPct: 78, yPct: 52 },
+    "Accessories": { xPct: 80, yPct: 28 },
+    "Top":         { xPct: 50, yPct: 33 },
+    "Dress":       { xPct: 50, yPct: 48 },
+    "Bag":         { xPct: 80, yPct: 53 },
     "Bottom":      { xPct: 50, yPct: 60 },
     "Shoes":       { xPct: 50, yPct: 88 },
   };
@@ -38,23 +38,60 @@ function getHotspotsForLook(items: Array<{ category: string }>) {
 router.post("/generate", async (req, res) => {
   try {
     const body = GenerateOutfitsBody.parse(req.body);
-    const numLooks = body.numLooks ?? 3;
+    const numLooks = body.numLooks ?? 4;
+    const maxBudget = body.maxBudget as number | undefined;
     const userSizes = body.userSizes as { top?: string; bottom?: string; shoes?: string; dress?: string } | undefined;
+    const profile = body.userProfile as {
+      gender?: string; age?: number; skinTone?: string; location?: string;
+      stylePreferences?: string[]; avoidKeywords?: string[]; likedLookIds?: string[];
+      sizes?: { top?: string; bottom?: string; shoes?: string; dress?: string };
+    } | undefined;
 
-    const sizesText = userSizes
-      ? `User sizes: Top: ${userSizes.top || "not specified"}, Bottom: ${userSizes.bottom || "not specified"}, Shoes (US): ${userSizes.shoes || "not specified"}${userSizes.dress ? `, Dress: ${userSizes.dress}` : ""}.`
+    // Build profile context for AI
+    const effectiveSizes = userSizes ?? profile?.sizes;
+    const sizesText = effectiveSizes
+      ? `Sizes: Top ${effectiveSizes.top || "unspecified"}, Bottom ${effectiveSizes.bottom || "unspecified"}, Shoes (US) ${effectiveSizes.shoes || "unspecified"}${effectiveSizes.dress ? `, Dress ${effectiveSizes.dress}` : ""}.`
       : "";
 
-    const systemPrompt = `You are a world-class personal stylist and fashion director. When given an outfit idea or inspiration, you create complete, cohesive outfit "looks" with real, shoppable items.
+    const profileText = profile ? [
+      profile.gender && profile.gender !== "prefer-not-to-say" ? `Gender: ${profile.gender}.` : "",
+      profile.age ? `Age: ${profile.age}.` : "",
+      profile.skinTone ? `Skin tone: ${profile.skinTone} — recommend makeup shades that complement this tone.` : "",
+      profile.location ? `Location: ${profile.location} — prioritise brands and retailers that ship to or operate locally in this region before recommending global retailers.` : "",
+      profile.stylePreferences?.length ? `Loves: ${profile.stylePreferences.join(", ")}.` : "",
+      profile.avoidKeywords?.length ? `Avoid: ${profile.avoidKeywords.join(", ")}.` : "",
+    ].filter(Boolean).join(" ") : "";
 
-Curate items from real retailers: Zara, ASOS, H&M, Free People, Anthropologie, Revolve, Nordstrom, Net-a-Porter, Farfetch, Mango, SHEIN, PrettyLittleThing, Topshop, Urban Outfitters, Madewell, Everlane, Reformation, SSENSE, Matches Fashion, Saks Fifth Avenue.
+    const budgetText = maxBudget
+      ? `IMPORTANT: Each complete look MUST have a total cost under $${maxBudget}. Prioritise affordable items — mix high-street and premium only if budget allows.`
+      : "";
 
-Return ONLY valid JSON with no markdown, no code fences, no extra text.`;
+    const systemPrompt = `You are a world-class personal stylist. Create complete, shoppable outfit looks with real purchasable items from actual retailer websites.
 
-    const userPrompt = `Create ${numLooks} distinct outfit looks inspired by: "${body.prompt}"
+Retailer priority:
+1. LOCAL retailers shipping to / operating in the user's location (if provided)
+2. REGIONAL retailers serving their market
+3. GLOBAL retailers: Zara, ASOS, H&M, Free People, Anthropologie, Revolve, Nordstrom, Net-a-Porter, Farfetch, Mango, Reformation, Urban Outfitters, Madewell, SSENSE, Saks Fifth Avenue, Selfridges, ASOS, Boohoo, PrettyLittleThing
+
+Return ONLY valid JSON. No markdown. No code fences.`;
+
+    const userPrompt = `Create ${numLooks} DISTINCT outfit looks inspired by: "${body.prompt}"
+
+${profileText}
 ${sizesText}
+${budgetText}
 
-Each look should be completely different in style/aesthetic. Include items across ALL these categories: Top (or Dress), Bottom (skip if using Dress), Shoes, Bag, Jewelry, Accessories (sunglasses/hat/belt/scarf), Makeup, Hair.
+Each look MUST be a completely different aesthetic/style. Include ALL item categories:
+- Top OR Dress (choose one per look)
+- Bottom (skip if using Dress)
+- Shoes
+- Bag
+- Jewelry (earrings, necklace, bracelet, or ring — be specific)
+- Accessories (sunglasses, hat, belt, scarf, or watch — be specific)
+- Makeup (specify EXACT products: e.g. "MAC Matte Lipstick in Ruby Woo" — include the actual shade name and product)
+- Hair (specific product recommendation: dry shampoo, hair oil, styling cream, etc.)
+
+For Makeup, include a SPECIFIC product with an exact shade/color that complements the user's skin tone (${profile?.skinTone || "medium"}) and the look's vibe. Include the exact product page URL.
 
 Return JSON:
 {
@@ -62,25 +99,25 @@ Return JSON:
     {
       "id": "look-1",
       "title": "Look title",
-      "vibe": "One sentence describing the aesthetic",
-      "styleNotes": "2-3 sentences of styling tips for this look",
+      "vibe": "One sentence vibe description",
+      "styleNotes": "2-3 sentences of styling tips",
       "totalCost": 0,
       "items": [
         {
           "category": "Top",
           "name": "Exact Product Name",
           "brand": "Brand Name",
-          "description": "Brief description of the piece",
+          "description": "Brief description",
           "price": 45.99,
-          "purchaseUrl": "https://www.brandwebsite.com/products/product-slug",
-          "color": "specific color name"
+          "purchaseUrl": "https://www.brandwebsite.com/products/exact-product",
+          "color": "specific color/shade name"
         }
       ]
     }
   ]
 }
 
-Calculate totalCost as the sum of all item prices. Purchase URLs must be realistic URLs from the brand's actual website.`;
+Calculate totalCost as the sum of all item prices.${maxBudget ? ` Every look MUST be under $${maxBudget}.` : ""}`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-5.2",
@@ -102,16 +139,21 @@ Calculate totalCost as the sum of all item prices. Purchase URLs must be realist
     const looks = (parsed.looks || []) as Array<{
       id: string;
       totalCost: number;
-      items: Array<{ category: string; price: number }>;
+      items: ItemWithCategory[];
     }>;
 
     looks.forEach((look, i) => {
       look.id = `look-${i + 1}`;
-      const total = look.items.reduce((sum, item) => sum + (item.price || 0), 0);
+      const total = look.items.reduce((sum, item) => sum + ((item as { price?: number }).price || 0), 0);
       look.totalCost = Math.round(total * 100) / 100;
     });
 
-    res.json({ prompt: body.prompt, looks, userSizes: userSizes ?? null });
+    res.json({
+      prompt: body.prompt,
+      looks,
+      userSizes: effectiveSizes ?? null,
+      maxBudget: maxBudget ?? null,
+    });
   } catch (err) {
     req.log.error({ err }, "Failed to generate outfits");
     res.status(500).json({ error: "Failed to generate outfits" });
@@ -119,7 +161,6 @@ Calculate totalCost as the sum of all item prices. Purchase URLs must be realist
 });
 
 // POST /outfits/model-image
-// Generates an AI model image wearing the look and returns hotspot positions
 router.post("/model-image", async (req, res) => {
   try {
     const body = GenerateModelImageBody.parse(req.body);
@@ -130,8 +171,10 @@ router.post("/model-image", async (req, res) => {
       items: Array<{ category: string; name: string; brand: string; color: string; description: string }>;
     };
     const userSizes = body.userSizes as { top?: string; bottom?: string; shoes?: string; dress?: string } | undefined;
+    const profile = body.userProfile as {
+      gender?: string; age?: number; skinTone?: string;
+    } | undefined;
 
-    // Build clothing description for the image prompt
     const clothingItems = look.items
       .filter(i => !["Hair", "Makeup"].includes(i.category))
       .map(i => `${i.color} ${i.name} (${i.category}) by ${i.brand}`)
@@ -141,23 +184,19 @@ router.post("/model-image", async (req, res) => {
     const makeupItem = look.items.find(i => i.category === "Makeup");
 
     const hairDesc = hairItem ? hairItem.description : "natural styled hair";
-    const makeupDesc = makeupItem ? makeupItem.description : "natural makeup";
+    const makeupDesc = makeupItem ? `${makeupItem.name} — ${makeupItem.description}` : "natural makeup";
 
-    // Infer body type context from sizes if available
     const sizeContext = userSizes?.top ? `wearing size ${userSizes.top}` : "";
+    const genderContext = profile?.gender === "man" ? "male" : "female";
+    const skinContext = profile?.skinTone ? `with ${profile.skinTone} skin tone` : "";
 
-    const imagePrompt = `Fashion editorial photograph. Full-length shot of a female model ${sizeContext} standing against a clean minimal studio background. She is wearing: ${clothingItems}. Her hair is styled as: ${hairDesc}. Makeup: ${makeupDesc}. The look has a ${look.vibe} aesthetic. Professional fashion photography lighting, sharp focus, high resolution, photorealistic. Full body visible from head to toe. Neutral light grey backdrop.`;
+    const imagePrompt = `Professional fashion editorial photograph. Full-length shot of a ${genderContext} model ${skinContext} ${sizeContext} standing against a clean minimal studio backdrop (soft grey). She is wearing: ${clothingItems}. Her hair is styled: ${hairDesc}. Full makeup: ${makeupDesc}. The look has a ${look.vibe} aesthetic. Professional lighting, sharp focus, full body visible from head to toe.`;
 
     const imageBuffer = await generateImageBuffer(imagePrompt, "1024x1024");
     const b64 = imageBuffer.toString("base64");
-
     const hotspots = getHotspotsForLook(look.items);
 
-    res.json({
-      lookId: look.id,
-      modelImageB64: b64,
-      hotspots,
-    });
+    res.json({ lookId: look.id, modelImageB64: b64, hotspots });
   } catch (err) {
     req.log.error({ err }, "Failed to generate model image");
     res.status(500).json({ error: "Failed to generate model image" });
@@ -179,10 +218,7 @@ router.get("/saved", async (req, res) => {
 router.get("/saved/:id", async (req, res) => {
   try {
     const { id } = GetSavedOutfitParams.parse(req.params);
-    const [outfit] = await db
-      .select()
-      .from(savedOutfitsTable)
-      .where(eq(savedOutfitsTable.id, id));
+    const [outfit] = await db.select().from(savedOutfitsTable).where(eq(savedOutfitsTable.id, id));
     if (!outfit) {
       res.status(404).json({ error: "Outfit not found" });
       return;

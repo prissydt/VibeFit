@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Sparkles, Bookmark, ShoppingBag } from "lucide-react";
+import { Sparkles, Bookmark, ShoppingBag, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/context/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
@@ -33,6 +33,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
               )}
             >
               Create
+            </Link>
+            <Link 
+              href="/profile" 
+              className={cn(
+                "text-xs font-medium uppercase tracking-widest transition-colors hover:text-primary flex items-center gap-1.5",
+                location.startsWith("/profile") ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              <User className="w-3.5 h-3.5" />
+              Profile
             </Link>
             <Link 
               href="/saved" 

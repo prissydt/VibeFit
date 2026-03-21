@@ -8,6 +8,7 @@ import Home from "@/pages/Home";
 import SavedLooks from "@/pages/SavedLooks";
 import SavedLookDetail from "@/pages/SavedLookDetail";
 import LooksPage from "@/pages/LooksPage";
+import ProfilePage from "@/pages/ProfilePage";
 import { CartProvider } from "@/context/CartContext";
 
 const queryClient = new QueryClient({
@@ -24,6 +25,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/looks" component={LooksPage} />
+      <Route path="/profile" component={ProfilePage} />
       <Route path="/saved" component={SavedLooks} />
       <Route path="/saved/:id" component={SavedLookDetail} />
       <Route component={NotFound} />

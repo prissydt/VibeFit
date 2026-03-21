@@ -4,9 +4,13 @@ import { useGenerateOutfits } from "@workspace/api-client-react";
 import { Layout } from "@/components/Layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Sparkles, ChevronRight } from "lucide-react";
 import { useLocation } from "wouter";
 import { lookStore } from "@/lib/lookStore";
+import { profileStore } from "@/lib/profileStore";
+import { ProfileForm } from "@/components/ProfileForm";
+import { cn } from "@/lib/utils";
 
 // Pre-defined prompts for inspiration
 const SUGGESTIONS = [
@@ -14,6 +18,15 @@ const SUGGESTIONS = [
   "Sleek minimalist evening wear for a gallery opening",
   "Edgy streetwear with metallic accents for a concert",
   "Quiet luxury weekend getaway in Aspen"
+];
+
+const BUDGET_OPTIONS = [
+  { label: "$50", value: 50 },
+  { label: "$100", value: 100 },
+  { label: "$250", value: 250 },
+  { label: "$500", value: 500 },
+  { label: "$1000", value: 1000 },
+  { label: "No limit", value: undefined }
 ];
 
 function LoadingState() {
@@ -28,7 +41,7 @@ function LoadingState() {
           <Sparkles className="w-4 h-4 text-primary absolute" />
         </motion.div>
         <h2 className="text-2xl font-serif text-foreground">Curating Your Wardrobe...</h2>
-        <p className="text-sm text-muted-foreground animate-pulse">Our AI stylists are pulling pieces from global collections.</p>
+        <p className="text-sm text-muted-foreground animate-pulse">Searching local & global collections...</p>
       </div>
 
       <div className="glass-panel p-8 rounded-xl overflow-hidden relative">
@@ -57,6 +70,10 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const [prompt, setPrompt] = useState("");
   const [isSizesOpen, setIsSizesOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [maxBudget, setMaxBudget] = useState<number | undefined>(undefined);
+  const [customBudget, setCustomBudget] = useState("");
+
   const [sizes, setSizes] = useState({
     top: "",
     bottom: "",
@@ -69,7 +86,13 @@ export default function Home() {
   const handleGenerate = () => {
     if (!prompt.trim()) return;
     generateMutation.mutate({
-      data: { prompt, numLooks: 3, userSizes: sizes }
+      data: { 
+        prompt, 
+        numLooks: 4, 
+        maxBudget,
+        userSizes: sizes,
+        userProfile: profileStore.get()
+      }
     }, {
       onSuccess: (data) => {
         lookStore.set(data);
@@ -118,6 +141,45 @@ export default function Home() {
                   }}
                 />
                 
+                {/* Budget Form */}
+                <div className="bg-background/80 backdrop-blur-md border border-white/10 rounded-lg p-4 transition-all">
+                  <div className="space-y-3">
+                    <label className="text-[10px] text-muted-foreground uppercase tracking-widest block">Max Budget (Optional)</label>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {BUDGET_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.label}
+                          onClick={() => {
+                            setMaxBudget(opt.value);
+                            setCustomBudget("");
+                          }}
+                          className={cn(
+                            "px-3 py-1.5 text-xs rounded-full border transition-all",
+                            maxBudget === opt.value && customBudget === ""
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : "bg-black/40 border-white/10 hover:border-white/30 text-muted-foreground"
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                      <div className="flex items-center gap-2 ml-2">
+                        <span className="text-muted-foreground text-sm">$</span>
+                        <Input
+                          type="number"
+                          placeholder="Custom"
+                          value={customBudget}
+                          onChange={(e) => {
+                            setCustomBudget(e.target.value);
+                            setMaxBudget(e.target.value ? Number(e.target.value) : undefined);
+                          }}
+                          className="w-24 h-8 text-xs bg-black/40 border-white/10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Sizes Form */}
                 <div className="bg-background/80 backdrop-blur-md border border-white/10 rounded-lg p-4 transition-all">
                   <button 
@@ -141,7 +203,7 @@ export default function Home() {
                             <select 
                               value={sizes.top}
                               onChange={(e) => setSizes(prev => ({...prev, top: e.target.value}))}
-                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none"
+                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none text-foreground"
                             >
                               <option value="">Select</option>
                               {['XS', 'S', 'M', 'L', 'XL', '2XL'].map(s => <option key={s} value={s}>{s}</option>)}
@@ -155,7 +217,7 @@ export default function Home() {
                               placeholder="e.g. 28x30 or M"
                               value={sizes.bottom}
                               onChange={(e) => setSizes(prev => ({...prev, bottom: e.target.value}))}
-                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none"
+                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none text-foreground"
                             />
                           </div>
 
@@ -164,7 +226,7 @@ export default function Home() {
                             <select 
                               value={sizes.shoes}
                               onChange={(e) => setSizes(prev => ({...prev, shoes: e.target.value}))}
-                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none"
+                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none text-foreground"
                             >
                               <option value="">Select</option>
                               {['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11'].map(s => <option key={s} value={s}>{s}</option>)}
@@ -176,13 +238,36 @@ export default function Home() {
                             <select 
                               value={sizes.dress}
                               onChange={(e) => setSizes(prev => ({...prev, dress: e.target.value}))}
-                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none"
+                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none text-foreground"
                             >
                               <option value="">Select</option>
                               {['0', '2', '4', '6', '8', '10', '12', '14', '16'].map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                           </div>
                         </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Profile Form */}
+                <div className="bg-background/80 backdrop-blur-md border border-white/10 rounded-lg p-4 transition-all">
+                  <button 
+                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    className="flex justify-between items-center w-full text-sm font-medium uppercase tracking-widest text-foreground hover:text-primary transition-colors"
+                  >
+                    My Profile (Optional)
+                    <ChevronRight className={`w-4 h-4 transition-transform ${isProfileOpen ? 'rotate-90' : ''}`} />
+                  </button>
+                  <AnimatePresence>
+                    {isProfileOpen && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <ProfileForm />
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -203,7 +288,7 @@ export default function Home() {
                   <Button 
                     size="lg" 
                     onClick={handleGenerate}
-                    disabled={!prompt.trim()}
+                    disabled={!prompt.trim() || generateMutation.isPending}
                     className="w-full sm:w-auto"
                   >
                     <Sparkles className="w-4 h-4 mr-2" />

@@ -1,17 +1,14 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.2.0
-  description: Fit Finder API - AI-powered outfit builder
+  version: 0.3.0
+  description: Fit Finder API
 servers:
   - url: /api
-    description: Base API path
 tags:
   - name: health
-    description: Health operations
   - name: outfits
-    description: Outfit generation and management
+  - name: profile
 paths:
   /healthz:
     get:
@@ -25,6 +22,49 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /profile:
+    get:
+      operationId: getProfile
+      tags: [profile]
+      summary: Get user profile
+      parameters:
+        - name: profileId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    put:
+      operationId: upsertProfile
+      tags: [profile]
+      summary: Create or update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertProfileRequest"
+      responses:
+        "200":
+          description: Saved profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
 
   /outfits/generate:
     post:
@@ -75,12 +115,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GenerateModelImageResponse"
-        "500":
-          description: Server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
   /outfits/saved:
     get:
@@ -108,7 +142,7 @@ paths:
             type: integer
       responses:
         "200":
-          description: Saved outfit detail
+          description: Saved outfit
           content:
             application/json:
               schema:
@@ -132,7 +166,7 @@ paths:
             type: integer
       responses:
         "200":
-          description: Deleted successfully
+          description: Deleted
           content:
             application/json:
               schema:
@@ -164,69 +198,126 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
     ErrorResponse:
       type: object
       properties:
         error:
           type: string
-      required:
-        - error
+      required: [error]
 
     SuccessResponse:
       type: object
       properties:
         success:
           type: boolean
-      required:
-        - success
+      required: [success]
 
     UserSizes:
       type: object
       properties:
         top:
           type: string
-          description: Top size (XS/S/M/L/XL/2XL)
         bottom:
           type: string
-          description: Bottom/pants size
         shoes:
           type: string
-          description: Shoe size (US)
         dress:
           type: string
-          description: Dress size
 
-    Hotspot:
+    UserProfile:
       type: object
-      description: Position of an item on the model image (percentage coordinates)
       properties:
-        xPct:
-          type: number
-          description: X position as percentage of image width (0-100)
-        yPct:
-          type: number
-          description: Y position as percentage of image height (0-100)
-      required:
-        - xPct
-        - yPct
+        profileId:
+          type: string
+          description: UUID that identifies the device/user
+        name:
+          type: string
+        gender:
+          type: string
+          enum: [woman, man, non-binary, prefer-not-to-say]
+        age:
+          type: integer
+        skinTone:
+          type: string
+          enum: [fair, light, medium, olive, tan, deep, rich]
+        location:
+          type: string
+          description: City or region for local brand discovery
+        sizes:
+          $ref: "#/components/schemas/UserSizes"
+        stylePreferences:
+          type: array
+          items:
+            type: string
+          description: Free-form style keywords the user loves
+        avoidKeywords:
+          type: array
+          items:
+            type: string
+          description: Things the user wants to avoid
+        likedLookIds:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [profileId]
+
+    UpsertProfileRequest:
+      type: object
+      properties:
+        profileId:
+          type: string
+        name:
+          type: string
+        gender:
+          type: string
+          enum: [woman, man, non-binary, prefer-not-to-say]
+        age:
+          type: integer
+        skinTone:
+          type: string
+          enum: [fair, light, medium, olive, tan, deep, rich]
+        location:
+          type: string
+        sizes:
+          $ref: "#/components/schemas/UserSizes"
+        stylePreferences:
+          type: array
+          items:
+            type: string
+        avoidKeywords:
+          type: array
+          items:
+            type: string
+        likedLookIds:
+          type: array
+          items:
+            type: string
+      required: [profileId]
 
     GenerateOutfitsRequest:
       type: object
       properties:
         prompt:
           type: string
-          description: Outfit idea or inspiration text
         numLooks:
           type: integer
-          description: Number of distinct looks to generate (default 3)
-          default: 3
+          default: 4
+        maxBudget:
+          type: number
+          description: Maximum total spend for a single look in USD
         userSizes:
           $ref: "#/components/schemas/UserSizes"
-      required:
-        - prompt
+        userProfile:
+          $ref: "#/components/schemas/UserProfile"
+      required: [prompt]
 
     GenerateModelImageRequest:
       type: object
@@ -235,8 +326,9 @@ components:
           $ref: "#/components/schemas/OutfitLook"
         userSizes:
           $ref: "#/components/schemas/UserSizes"
-      required:
-        - look
+        userProfile:
+          $ref: "#/components/schemas/UserProfile"
+      required: [look]
 
     GenerateModelImageResponse:
       type: object
@@ -245,40 +337,31 @@ components:
           type: string
         modelImageB64:
           type: string
-          description: Base64-encoded PNG of model wearing the outfit
         hotspots:
           type: array
           items:
             $ref: "#/components/schemas/ItemHotspot"
-      required:
-        - lookId
-        - modelImageB64
-        - hotspots
+      required: [lookId, modelImageB64, hotspots]
 
     ItemHotspot:
       type: object
       properties:
         itemIndex:
           type: integer
-          description: Index of the item in the look's items array
         category:
           type: string
         xPct:
           type: number
         yPct:
           type: number
-      required:
-        - itemIndex
-        - category
-        - xPct
-        - yPct
+      required: [itemIndex, category, xPct, yPct]
 
     OutfitItem:
       type: object
       properties:
         category:
           type: string
-          description: "Category: Top, Bottom, Dress, Shoes, Bag, Jewelry, Accessories, Makeup, Hair"
+          description: "Top, Bottom, Dress, Shoes, Bag, Jewelry, Accessories, Makeup, Hair"
         name:
           type: string
         brand:
@@ -289,19 +372,11 @@ components:
           type: number
         purchaseUrl:
           type: string
-          description: Direct retailer URL to purchase this item
         imageUrl:
           type: string
         color:
           type: string
-      required:
-        - category
-        - name
-        - brand
-        - description
-        - price
-        - purchaseUrl
-        - color
+      required: [category, name, brand, description, price, purchaseUrl, color]
 
     OutfitLook:
       type: object
@@ -322,18 +397,11 @@ components:
           type: string
         modelImageB64:
           type: string
-          description: Base64 model image (populated after calling model-image endpoint)
         hotspots:
           type: array
           items:
             $ref: "#/components/schemas/ItemHotspot"
-      required:
-        - id
-        - title
-        - vibe
-        - totalCost
-        - items
-        - styleNotes
+      required: [id, title, vibe, totalCost, items, styleNotes]
 
     GenerateOutfitsResponse:
       type: object
@@ -346,9 +414,9 @@ components:
             $ref: "#/components/schemas/OutfitLook"
         userSizes:
           $ref: "#/components/schemas/UserSizes"
-      required:
-        - prompt
-        - looks
+        maxBudget:
+          type: number
+      required: [prompt, looks]
 
     SaveOutfitRequest:
       type: object
@@ -359,9 +427,7 @@ components:
           $ref: "#/components/schemas/OutfitLook"
         userSizes:
           $ref: "#/components/schemas/UserSizes"
-      required:
-        - prompt
-        - look
+      required: [prompt, look]
 
     SavedOutfit:
       type: object
@@ -377,11 +443,7 @@ components:
         savedAt:
           type: string
           format: date-time
-      required:
-        - id
-        - prompt
-        - look
-        - savedAt
+      required: [id, prompt, look, savedAt]
 
     SavedOutfitsResponse:
       type: object
@@ -390,5 +452,4 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SavedOutfit"
-      required:
-        - outfits
+      required: [outfits]
