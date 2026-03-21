@@ -9,7 +9,7 @@ import { useCart } from "@/context/CartContext";
 import { useSaveOutfit } from "@workspace/api-client-react";
 import { profileStore } from "@/lib/profileStore";
 import { Button } from "@/components/ui/button";
-import { Tags, ShoppingBag, Heart, X, CheckCircle2, Bookmark } from "lucide-react";
+import { Tags, Heart, X, Bookmark, BookmarkCheck } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,33 +40,35 @@ export default function LooksPage() {
     setActiveLookIndex(prev => prev + 1);
   };
 
+  const saveLook = (look: any) => {
+    if (savedLooks.has(look.id)) return;
+    profileStore.likeLook(look.id);
+    saveMutation.mutate({
+      data: { prompt: data.prompt, look, userSizes: data.userSizes }
+    });
+    setSavedLooks(prev => new Set(prev).add(look.id));
+  };
+
+  const handleSaveOnly = (idx: number) => {
+    const look = looks[idx];
+    if (!look) return;
+    if (savedLooks.has(look.id)) {
+      toast({ title: "Already saved", description: "This look is in your wardrobe." });
+      return;
+    }
+    saveLook(look);
+    toast({ title: "Saved to your wardrobe", description: "Find it anytime under Saved." });
+  };
+
   const handleLove = (idx: number) => {
     const look = looks[idx];
     if (!look) return;
-    
-    // Save to profile likes
-    profileStore.likeLook(look.id);
-    
-    // Save to backend
-    if (!savedLooks.has(look.id)) {
-      saveMutation.mutate({
-        data: {
-          prompt: data.prompt,
-          look,
-          userSizes: data.userSizes
-        }
-      });
-      setSavedLooks(prev => new Set(prev).add(look.id));
-    }
-
-    // Add to cart
+    saveLook(look);
     addFullOutfit(look);
-
     toast({
       title: "Look saved! ❤️",
       description: "Items added to your cart.",
     });
-
     setSwipedLooks(prev => new Set(prev).add(idx));
     setTimeout(() => handleNext(), 300);
   };
@@ -164,9 +166,26 @@ export default function LooksPage() {
               {looks[activeLookIndex] && (
                 <>
                   <div className="space-y-4">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium uppercase tracking-widest">
-                      <Tags className="w-3 h-3" />
-                      {looks[activeLookIndex].vibe}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium uppercase tracking-widest">
+                        <Tags className="w-3 h-3" />
+                        {looks[activeLookIndex].vibe}
+                      </div>
+                      <button
+                        onClick={() => handleSaveOnly(activeLookIndex)}
+                        title={savedLooks.has(looks[activeLookIndex].id) ? "Saved to wardrobe" : "Save for later"}
+                        className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors ${
+                          savedLooks.has(looks[activeLookIndex].id)
+                            ? "bg-primary/10 border-primary/30 text-primary"
+                            : "bg-white/5 border-white/10 text-muted-foreground hover:text-foreground hover:border-white/20"
+                        }`}
+                      >
+                        {savedLooks.has(looks[activeLookIndex].id) ? (
+                          <><BookmarkCheck className="w-3.5 h-3.5" /> Saved</>
+                        ) : (
+                          <><Bookmark className="w-3.5 h-3.5" /> Save</>
+                        )}
+                      </button>
                     </div>
                     <h1 className="text-4xl lg:text-5xl font-serif text-foreground leading-tight">
                       {looks[activeLookIndex].title}
