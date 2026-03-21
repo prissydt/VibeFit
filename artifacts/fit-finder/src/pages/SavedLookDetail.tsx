@@ -1,5 +1,5 @@
 import { useRoute } from "wouter";
-import { useGetSavedOutfit } from "@workspace/api-client-react";
+import { useGetSavedOutfit, getGetSavedOutfitQueryOptions } from "@workspace/api-client-react";
 import { Layout } from "@/components/Layout";
 import { ItemRow } from "@/components/ItemRow";
 import { ModelView } from "@/components/ModelView";
@@ -13,8 +13,9 @@ export default function SavedLookDetail() {
   const [, params] = useRoute("/saved/:id");
   const id = params?.id ? parseInt(params.id, 10) : 0;
   
+  const queryOptions = getGetSavedOutfitQueryOptions(id);
   const { data, isLoading, isError } = useGetSavedOutfit(id, {
-    query: { enabled: !!id }
+    query: { ...queryOptions, enabled: !!id }
   });
 
   const { addFullOutfit } = useCart();
