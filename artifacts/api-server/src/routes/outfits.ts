@@ -15,6 +15,25 @@ import { eq } from "drizzle-orm";
 const router: IRouter = Router();
 
 type ItemWithCategory = { category: string; price?: number };
+type LookItem = { category: string; name: string; brand: string; color: string; description: string; price?: number };
+type LookShape = { id: string; title: string; vibe: string; items: LookItem[]; totalCost: number };
+
+function buildImagePrompt(
+  look: LookShape,
+  opts: { gender?: string; skinTone?: string; topSize?: string }
+): string {
+  const clothingItems = look.items
+    .filter(i => !["Hair", "Makeup"].includes(i.category))
+    .map(i => `${i.color} ${i.name} (${i.category}) by ${i.brand}`)
+    .join(", ");
+  const hairDesc = look.items.find(i => i.category === "Hair")?.description ?? "natural styled hair";
+  const makeupItem = look.items.find(i => i.category === "Makeup");
+  const makeupDesc = makeupItem ? `${makeupItem.name} — ${makeupItem.description}` : "natural makeup";
+  const genderCtx = opts.gender === "man" ? "male" : "female";
+  const skinCtx = opts.skinTone ? `with ${opts.skinTone} skin tone` : "";
+  const sizeCtx = opts.topSize ? `wearing size ${opts.topSize}` : "";
+  return `Professional fashion editorial photograph. Full-length shot of a ${genderCtx} model ${skinCtx} ${sizeCtx} standing against a clean minimal studio backdrop (soft grey). She is wearing: ${clothingItems}. Her hair is styled: ${hairDesc}. Full makeup: ${makeupDesc}. The look has a ${look.vibe} aesthetic. Professional lighting, sharp focus, full body visible from head to toe.`;
+}
 
 function getHotspotsForLook(items: ItemWithCategory[]) {
   const REGION_MAP: Record<string, { xPct: number; yPct: number }> = {
@@ -147,6 +166,33 @@ Calculate totalCost as the sum of all item prices.${maxBudget ? ` Every look MUS
       look.id = `look-${i + 1}`;
       const total = look.items.reduce((sum, item) => sum + ((item as { price?: number }).price || 0), 0);
       look.totalCost = Math.round(total * 100) / 100;
+    });
+
+    // Generate all model images in parallel so the looks page renders immediately
+    const imageOpts = {
+      gender: profile?.gender,
+      skinTone: profile?.skinTone,
+      topSize: effectiveSizes?.top,
+    };
+
+    const imageResults = await Promise.allSettled(
+      looks.map(async (look) => {
+        const prompt = buildImagePrompt(look as unknown as LookShape, imageOpts);
+        const buf = await generateImageBuffer(prompt, "1024x1024");
+        return {
+          lookId: look.id,
+          modelImageB64: buf.toString("base64"),
+          hotspots: getHotspotsForLook(look.items),
+        };
+      })
+    );
+
+    // Embed whichever images succeeded directly into the looks
+    imageResults.forEach((result, i) => {
+      if (result.status === "fulfilled") {
+        (looks[i] as any).modelImageB64 = result.value.modelImageB64;
+        (looks[i] as any).hotspots = result.value.hotspots;
+      }
     });
 
     res.json({
