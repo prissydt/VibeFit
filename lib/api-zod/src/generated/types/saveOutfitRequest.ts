@@ -9,6 +9,8 @@ import type { OutfitLook } from "./outfitLook";
 import type { UserSizes } from "./userSizes";
 
 export interface SaveOutfitRequest {
+  /** Profile ID of the user saving the look */
+  profileId?: string;
   prompt: string;
   look: OutfitLook;
   userSizes?: UserSizes;

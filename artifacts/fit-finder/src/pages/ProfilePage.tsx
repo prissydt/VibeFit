@@ -26,7 +26,7 @@ export default function ProfilePage() {
   const [profileId, setProfileId] = useState(profileStore.get().profileId);
 
   const p = profileStore.get();
-  const { data: savedData, isLoading: savedLoading, refetch: refetchSaved } = useGetSavedOutfits();
+  const { data: savedData, isLoading: savedLoading, refetch: refetchSaved } = useGetSavedOutfits({ profileId: p.profileId });
   const deleteMutation = useDeleteSavedOutfit();
 
   const handleDeleteSaved = (id: number, e: React.MouseEvent) => {

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/Layout";
@@ -6,24 +6,27 @@ import { ModelView } from "@/components/ModelView";
 import { ItemRow } from "@/components/ItemRow";
 import { lookStore } from "@/lib/lookStore";
 import { useCart } from "@/context/CartContext";
-import { useSaveOutfit } from "@workspace/api-client-react";
+import { useSaveOutfit, useGenerateOutfits } from "@workspace/api-client-react";
 import { profileStore } from "@/lib/profileStore";
 import { Button } from "@/components/ui/button";
-import { Tags, Heart, X, Bookmark, BookmarkCheck } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Tags, Heart, X, Bookmark, BookmarkCheck, RefreshCw, Sparkles } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 export default function LooksPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const data = lookStore.get();
+  const [data, setData] = useState(lookStore.get());
   
   const [activeLookIndex, setActiveLookIndex] = useState(0);
   const [swipedLooks, setSwipedLooks] = useState<Set<number>>(new Set());
   const [savedLooks, setSavedLooks] = useState<Set<string>>(new Set());
+  const [refinementPrompt, setRefinementPrompt] = useState("");
 
   const { addFullOutfit } = useCart();
   const saveMutation = useSaveOutfit();
+  const generateMutation = useGenerateOutfits();
 
   useEffect(() => {
     if (!data || !data.looks || data.looks.length === 0) {
@@ -42,11 +45,44 @@ export default function LooksPage() {
 
   const saveLook = (look: any) => {
     if (savedLooks.has(look.id)) return;
+    const profile = profileStore.get();
     profileStore.likeLook(look.id);
     saveMutation.mutate({
-      data: { prompt: data.prompt, look, userSizes: data.userSizes }
+      data: {
+        profileId: profile.profileId,
+        prompt: data!.prompt,
+        look,
+        userSizes: data!.userSizes
+      } as any
     });
     setSavedLooks(prev => new Set(prev).add(look.id));
+  };
+
+  const handleRegenerate = () => {
+    if (!data) return;
+    const profile = profileStore.get();
+    const combinedPrompt = refinementPrompt.trim()
+      ? `${data.prompt}. Additional refinement: ${refinementPrompt.trim()}`
+      : data.prompt;
+    generateMutation.mutate({
+      data: {
+        prompt: combinedPrompt,
+        numLooks: 4,
+        maxBudget: data.maxBudget ?? undefined,
+        userProfile: profile as any,
+      }
+    }, {
+      onSuccess: (newData) => {
+        lookStore.set(newData as any);
+        setData(newData as any);
+        setActiveLookIndex(0);
+        setSwipedLooks(new Set());
+        setRefinementPrompt("");
+      },
+      onError: () => {
+        toast({ title: "Regeneration failed", description: "Please try again." });
+      }
+    });
   };
 
   const handleSaveOnly = (idx: number) => {
@@ -79,19 +115,59 @@ export default function LooksPage() {
   };
 
   if (isDone) {
+    if (generateMutation.isPending) {
+      return (
+        <Layout>
+          <div className="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-lg mx-auto text-center space-y-6">
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+              className="w-14 h-14 rounded-full border-t-2 border-primary border-r-2 border-r-transparent flex items-center justify-center"
+            >
+              <Sparkles className="w-5 h-5 text-primary absolute" />
+            </motion.div>
+            <h2 className="text-2xl font-serif">Curating new looks…</h2>
+            <p className="text-sm text-muted-foreground animate-pulse">Applying your refinements</p>
+          </div>
+        </Layout>
+      );
+    }
+
     return (
       <Layout>
         <div className="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-lg mx-auto text-center space-y-8">
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-4">
-            <Heart className="w-16 h-16 text-primary mx-auto" />
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-3">
+            <Heart className="w-14 h-14 text-primary mx-auto" />
             <h1 className="text-4xl font-serif">All Caught Up!</h1>
-            <p className="text-muted-foreground">You've seen all the looks we curated for this prompt.</p>
+            <p className="text-muted-foreground">You've seen all the looks for this prompt.</p>
           </motion.div>
-          <div className="flex flex-col sm:flex-row gap-4 w-full">
-            <Button className="flex-1 h-12" onClick={() => setLocation("/")}>
-              Generate More
+
+          {/* Regenerate section */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="w-full glass-panel rounded-xl p-6 space-y-4 text-left"
+          >
+            <div className="space-y-1">
+              <h3 className="text-lg font-serif">Want something different?</h3>
+              <p className="text-xs text-muted-foreground">Add an optional refinement to tweak the direction, or regenerate as-is.</p>
+            </div>
+            <Textarea
+              placeholder="e.g. 'More colourful', 'fewer accessories', 'add a blazer'…"
+              value={refinementPrompt}
+              onChange={(e) => setRefinementPrompt(e.target.value)}
+              className="min-h-[80px] bg-background/60 border-white/10 text-sm"
+            />
+            <Button className="w-full h-11" onClick={handleRegenerate}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              {refinementPrompt.trim() ? "Tweak & Regenerate" : "Regenerate Looks"}
             </Button>
-            <Button variant="outline" className="flex-1 h-12" onClick={() => setLocation("/saved")}>
+          </motion.div>
+
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <Button variant="outline" className="flex-1 h-11" onClick={() => setLocation("/")}>
+              Start Fresh
+            </Button>
+            <Button variant="outline" className="flex-1 h-11" onClick={() => setLocation("/saved")}>
               <Bookmark className="w-4 h-4 mr-2" />
               View Saved
             </Button>

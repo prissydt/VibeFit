@@ -1,4 +1,5 @@
 import { useGetSavedOutfits, useDeleteSavedOutfit } from "@workspace/api-client-react";
+import { profileStore } from "@/lib/profileStore";
 import { Layout } from "@/components/Layout";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
@@ -6,7 +7,8 @@ import { formatPrice } from "@/lib/utils";
 import { Trash2, ArrowRight, Loader2, BookmarkX, Image as ImageIcon } from "lucide-react";
 
 export default function SavedLooks() {
-  const { data, isLoading, refetch } = useGetSavedOutfits();
+  const profileId = profileStore.get().profileId;
+  const { data, isLoading, refetch } = useGetSavedOutfits({ profileId });
   const deleteMutation = useDeleteSavedOutfit();
 
   const handleDelete = (id: number, e: React.MouseEvent) => {

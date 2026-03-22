@@ -6,6 +6,7 @@ import {
   SaveOutfitBody,
   GetSavedOutfitParams,
   DeleteSavedOutfitParams,
+  GetSavedOutfitsQueryParams,
 } from "@workspace/api-zod";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { generateImageBuffer } from "@workspace/integrations-openai-ai-server/image";
@@ -206,7 +207,12 @@ router.post("/model-image", async (req, res) => {
 // GET /outfits/saved
 router.get("/saved", async (req, res) => {
   try {
-    const outfits = await db.select().from(savedOutfitsTable).orderBy(savedOutfitsTable.savedAt);
+    const { profileId } = GetSavedOutfitsQueryParams.parse(req.query);
+    const query = db.select().from(savedOutfitsTable);
+    const outfits = await (profileId
+      ? query.where(eq(savedOutfitsTable.profileId, profileId))
+      : query
+    ).orderBy(savedOutfitsTable.savedAt);
     res.json({ outfits: outfits.reverse() });
   } catch (err) {
     req.log.error({ err }, "Failed to fetch saved outfits");
@@ -248,10 +254,12 @@ router.post("/save", async (req, res) => {
     const body = SaveOutfitBody.parse(req.body);
     const look = outfitLookSchema.parse(body.look);
     const userSizes = body.userSizes ? userSizesSchema.parse(body.userSizes) : null;
+    const profileId = (body as { profileId?: string }).profileId ?? null;
 
     const [saved] = await db
       .insert(savedOutfitsTable)
       .values({
+        profileId,
         prompt: body.prompt,
         look: look as object,
         userSizes: userSizes as object,

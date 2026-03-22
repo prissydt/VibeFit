@@ -31,6 +31,7 @@ export const userSizesSchema = z.object({
 
 export const savedOutfitsTable = pgTable("saved_outfits", {
   id: serial("id").primaryKey(),
+  profileId: text("profile_id"),
   prompt: text("prompt").notNull(),
   look: jsonb("look").notNull(),
   userSizes: jsonb("user_sizes"),

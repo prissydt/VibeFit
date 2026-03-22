@@ -325,10 +325,18 @@ export const GenerateModelImageResponse = zod.object({
 /**
  * @summary Get saved outfits
  */
+export const GetSavedOutfitsQueryParams = zod.object({
+  profileId: zod.coerce
+    .string()
+    .optional()
+    .describe("Filter saved outfits by profile ID"),
+});
+
 export const GetSavedOutfitsResponse = zod.object({
   outfits: zod.array(
     zod.object({
       id: zod.number(),
+      profileId: zod.string().optional(),
       prompt: zod.string(),
       look: zod.object({
         id: zod.string(),
@@ -386,6 +394,7 @@ export const GetSavedOutfitParams = zod.object({
 
 export const GetSavedOutfitResponse = zod.object({
   id: zod.number(),
+  profileId: zod.string().optional(),
   prompt: zod.string(),
   look: zod.object({
     id: zod.string(),
@@ -447,6 +456,10 @@ export const DeleteSavedOutfitResponse = zod.object({
  * @summary Save an outfit look
  */
 export const SaveOutfitBody = zod.object({
+  profileId: zod
+    .string()
+    .optional()
+    .describe("Profile ID of the user saving the look"),
   prompt: zod.string(),
   look: zod.object({
     id: zod.string(),
@@ -494,6 +507,7 @@ export const SaveOutfitBody = zod.object({
 
 export const SaveOutfitResponse = zod.object({
   id: zod.number(),
+  profileId: zod.string().optional(),
   prompt: zod.string(),
   look: zod.object({
     id: zod.string(),

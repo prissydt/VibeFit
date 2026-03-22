@@ -12,6 +12,7 @@ export * from "./generateModelImageResponse";
 export * from "./generateOutfitsRequest";
 export * from "./generateOutfitsResponse";
 export * from "./getProfileParams";
+export * from "./getSavedOutfitsParams";
 export * from "./healthStatus";
 export * from "./itemHotspot";
 export * from "./outfitItem";

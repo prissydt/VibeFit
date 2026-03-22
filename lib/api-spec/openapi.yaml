@@ -121,6 +121,13 @@ paths:
       operationId: getSavedOutfits
       tags: [outfits]
       summary: Get saved outfits
+      parameters:
+        - name: profileId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter saved outfits by profile ID
       responses:
         "200":
           description: List of saved outfits
@@ -421,6 +428,9 @@ components:
     SaveOutfitRequest:
       type: object
       properties:
+        profileId:
+          type: string
+          description: Profile ID of the user saving the look
         prompt:
           type: string
         look:
@@ -434,6 +444,8 @@ components:
       properties:
         id:
           type: integer
+        profileId:
+          type: string
         prompt:
           type: string
         look:

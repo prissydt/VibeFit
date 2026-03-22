@@ -161,6 +161,8 @@ export interface GenerateOutfitsResponse {
 }
 
 export interface SaveOutfitRequest {
+  /** Profile ID of the user saving the look */
+  profileId?: string;
   prompt: string;
   look: OutfitLook;
   userSizes?: UserSizes;
@@ -168,6 +170,7 @@ export interface SaveOutfitRequest {
 
 export interface SavedOutfit {
   id: number;
+  profileId?: string;
   prompt: string;
   look: OutfitLook;
   userSizes?: UserSizes;
@@ -180,4 +183,11 @@ export interface SavedOutfitsResponse {
 
 export type GetProfileParams = {
   profileId: string;
+};
+
+export type GetSavedOutfitsParams = {
+  /**
+   * Filter saved outfits by profile ID
+   */
+  profileId?: string;
 };

@@ -23,6 +23,7 @@ import type {
   GenerateOutfitsRequest,
   GenerateOutfitsResponse,
   GetProfileParams,
+  GetSavedOutfitsParams,
   HealthStatus,
   SaveOutfitRequest,
   SavedOutfit,
@@ -472,41 +473,57 @@ export const useGenerateModelImage = <
 /**
  * @summary Get saved outfits
  */
-export const getGetSavedOutfitsUrl = () => {
-  return `/api/outfits/saved`;
+export const getGetSavedOutfitsUrl = (params?: GetSavedOutfitsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/outfits/saved?${stringifiedParams}`
+    : `/api/outfits/saved`;
 };
 
 export const getSavedOutfits = async (
+  params?: GetSavedOutfitsParams,
   options?: RequestInit,
 ): Promise<SavedOutfitsResponse> => {
-  return customFetch<SavedOutfitsResponse>(getGetSavedOutfitsUrl(), {
+  return customFetch<SavedOutfitsResponse>(getGetSavedOutfitsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetSavedOutfitsQueryKey = () => {
-  return [`/api/outfits/saved`] as const;
+export const getGetSavedOutfitsQueryKey = (params?: GetSavedOutfitsParams) => {
+  return [`/api/outfits/saved`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetSavedOutfitsQueryOptions = <
   TData = Awaited<ReturnType<typeof getSavedOutfits>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getSavedOutfits>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: GetSavedOutfitsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSavedOutfits>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetSavedOutfitsQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getGetSavedOutfitsQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getSavedOutfits>>> = ({
     signal,
-  }) => getSavedOutfits({ signal, ...requestOptions });
+  }) => getSavedOutfits(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getSavedOutfits>>,
@@ -527,15 +544,18 @@ export type GetSavedOutfitsQueryError = ErrorType<unknown>;
 export function useGetSavedOutfits<
   TData = Awaited<ReturnType<typeof getSavedOutfits>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof getSavedOutfits>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetSavedOutfitsQueryOptions(options);
+>(
+  params?: GetSavedOutfitsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSavedOutfits>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSavedOutfitsQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

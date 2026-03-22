@@ -10,6 +10,7 @@ import type { UserSizes } from "./userSizes";
 
 export interface SavedOutfit {
   id: number;
+  profileId?: string;
   prompt: string;
   look: OutfitLook;
   userSizes?: UserSizes;
