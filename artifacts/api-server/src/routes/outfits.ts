@@ -168,33 +168,6 @@ Calculate totalCost as the sum of all item prices.${maxBudget ? ` Every look MUS
       look.totalCost = Math.round(total * 100) / 100;
     });
 
-    // Generate all model images in parallel so the looks page renders immediately
-    const imageOpts = {
-      gender: profile?.gender,
-      skinTone: profile?.skinTone,
-      topSize: effectiveSizes?.top,
-    };
-
-    const imageResults = await Promise.allSettled(
-      looks.map(async (look) => {
-        const prompt = buildImagePrompt(look as unknown as LookShape, imageOpts);
-        const buf = await generateImageBuffer(prompt, "1024x1024");
-        return {
-          lookId: look.id,
-          modelImageB64: buf.toString("base64"),
-          hotspots: getHotspotsForLook(look.items),
-        };
-      })
-    );
-
-    // Embed whichever images succeeded directly into the looks
-    imageResults.forEach((result, i) => {
-      if (result.status === "fulfilled") {
-        (looks[i] as any).modelImageB64 = result.value.modelImageB64;
-        (looks[i] as any).hotspots = result.value.hotspots;
-      }
-    });
-
     res.json({
       prompt: body.prompt,
       looks,

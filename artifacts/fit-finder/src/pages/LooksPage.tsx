@@ -6,7 +6,7 @@ import { ModelView } from "@/components/ModelView";
 import { ItemRow } from "@/components/ItemRow";
 import { lookStore } from "@/lib/lookStore";
 import { useCart } from "@/context/CartContext";
-import { useSaveOutfit, useGenerateOutfits } from "@workspace/api-client-react";
+import { useSaveOutfit, useGenerateOutfits, generateModelImage } from "@workspace/api-client-react";
 import { profileStore } from "@/lib/profileStore";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,7 +72,24 @@ export default function LooksPage() {
         userProfile: profile as any,
       }
     }, {
-      onSuccess: (newData) => {
+      onSuccess: async (newData) => {
+        // Generate all model images in parallel before showing new cards
+        const looks = (newData as any).looks as any[];
+        const imageResults = await Promise.allSettled(
+          looks.map((look) =>
+            generateModelImage({
+              look,
+              userSizes: (newData as any).userSizes,
+              userProfile: profile as any,
+            } as any)
+          )
+        );
+        imageResults.forEach((result, i) => {
+          if (result.status === "fulfilled") {
+            looks[i].modelImageB64 = result.value.modelImageB64;
+            looks[i].hotspots = result.value.hotspots;
+          }
+        });
         lookStore.set(newData as any);
         setData(newData as any);
         setActiveLookIndex(0);

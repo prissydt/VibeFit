@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useGenerateOutfits } from "@workspace/api-client-react";
+import { useGenerateOutfits, generateModelImage } from "@workspace/api-client-react";
 import { Layout } from "@/components/Layout";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ const BUDGET_OPTIONS = [
   { label: "No limit", value: undefined }
 ];
 
-function LoadingState() {
+function LoadingState({ phase }: { phase: "outfits" | "images" }) {
   return (
     <div className="w-full max-w-4xl mx-auto py-12 px-4 space-y-12 flex-1 flex flex-col justify-center">
       <div className="text-center space-y-4">
@@ -40,8 +40,19 @@ function LoadingState() {
         >
           <Sparkles className="w-4 h-4 text-primary absolute" />
         </motion.div>
-        <h2 className="text-2xl font-serif text-foreground">Curating Your Wardrobe...</h2>
-        <p className="text-sm text-muted-foreground animate-pulse">Searching local & global collections...</p>
+        <AnimatePresence mode="wait">
+          {phase === "outfits" ? (
+            <motion.div key="outfits" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2">
+              <h2 className="text-2xl font-serif text-foreground">Curating Your Wardrobe...</h2>
+              <p className="text-sm text-muted-foreground animate-pulse">Searching local & global collections...</p>
+            </motion.div>
+          ) : (
+            <motion.div key="images" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2">
+              <h2 className="text-2xl font-serif text-foreground">Creating Your Looks...</h2>
+              <p className="text-sm text-muted-foreground animate-pulse">Styling 4 looks for you, almost ready...</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="glass-panel p-8 rounded-xl overflow-hidden relative">
@@ -73,6 +84,8 @@ export default function Home() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [maxBudget, setMaxBudget] = useState<number | undefined>(undefined);
   const [customBudget, setCustomBudget] = useState("");
+  const [loadingPhase, setLoadingPhase] = useState<"outfits" | "images">("outfits");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const [sizes, setSizes] = useState({
     top: "",
@@ -85,17 +98,40 @@ export default function Home() {
 
   const handleGenerate = () => {
     if (!prompt.trim()) return;
+    setLoadingPhase("outfits");
+    setIsGenerating(true);
+    const profile = profileStore.get();
     generateMutation.mutate({
       data: { 
         prompt, 
         numLooks: 4, 
         maxBudget,
         userSizes: sizes,
-        userProfile: profileStore.get()
+        userProfile: profile as any
       }
     }, {
-      onSuccess: (data) => {
-        lookStore.set(data);
+      onSuccess: async (data) => {
+        // Phase 2: generate all model images in parallel from the client
+        setLoadingPhase("images");
+        const looks = (data as any).looks as any[];
+        const imageResults = await Promise.allSettled(
+          looks.map((look) =>
+            generateModelImage({
+              look,
+              userSizes: (data as any).userSizes,
+              userProfile: profile as any,
+            } as any)
+          )
+        );
+        // Embed images into looks (gracefully skip any failures)
+        imageResults.forEach((result, i) => {
+          if (result.status === "fulfilled") {
+            looks[i].modelImageB64 = result.value.modelImageB64;
+            looks[i].hotspots = result.value.hotspots;
+          }
+        });
+        lookStore.set(data as any);
+        setIsGenerating(false);
         setLocation("/looks");
       }
     });
@@ -108,7 +144,7 @@ export default function Home() {
   return (
     <Layout>
       <AnimatePresence mode="wait">
-        {!generateMutation.isPending ? (
+        {!isGenerating ? (
           <motion.div 
             key="search"
             initial={{ opacity: 0, y: 20 }}
@@ -288,7 +324,7 @@ export default function Home() {
                   <Button 
                     size="lg" 
                     onClick={handleGenerate}
-                    disabled={!prompt.trim() || generateMutation.isPending}
+                    disabled={!prompt.trim() || isGenerating}
                     className="w-full sm:w-auto"
                   >
                     <Sparkles className="w-4 h-4 mr-2" />
@@ -306,7 +342,7 @@ export default function Home() {
             exit={{ opacity: 0 }}
             className="flex-1 w-full flex flex-col"
           >
-            <LoadingState />
+            <LoadingState phase={loadingPhase} />
           </motion.div>
         )}
       </AnimatePresence>
