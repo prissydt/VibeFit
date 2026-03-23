@@ -18,6 +18,16 @@ type ItemWithCategory = { category: string; price?: number };
 type LookItem = { category: string; name: string; brand: string; color: string; description: string; price?: number };
 type LookShape = { id: string; title: string; vibe: string; items: LookItem[]; totalCost: number };
 
+const SKIN_TONE_DESCRIPTIONS: Record<string, string> = {
+  fair:   "very fair, pale caucasian",
+  light:  "light, warm ivory",
+  medium: "medium, warm beige",
+  olive:  "olive, light brown mediterranean",
+  tan:    "tan, medium brown",
+  deep:   "deep brown",
+  rich:   "very deep, rich dark brown",
+};
+
 function buildImagePrompt(
   look: LookShape,
   opts: { gender?: string; skinTone?: string; topSize?: string }
@@ -29,10 +39,13 @@ function buildImagePrompt(
   const hairDesc = look.items.find(i => i.category === "Hair")?.description ?? "natural styled hair";
   const makeupItem = look.items.find(i => i.category === "Makeup");
   const makeupDesc = makeupItem ? `${makeupItem.name} — ${makeupItem.description}` : "natural makeup";
-  const genderCtx = opts.gender === "man" ? "male" : "female";
-  const skinCtx = opts.skinTone ? `with ${opts.skinTone} skin tone` : "";
-  const sizeCtx = opts.topSize ? `wearing size ${opts.topSize}` : "";
-  return `Professional fashion editorial photograph. Full-length shot of a ${genderCtx} model ${skinCtx} ${sizeCtx} standing against a clean minimal studio backdrop (soft grey). She is wearing: ${clothingItems}. Her hair is styled: ${hairDesc}. Full makeup: ${makeupDesc}. The look has a ${look.vibe} aesthetic. Professional lighting, sharp focus, full body visible from head to toe.`;
+  const isMale = opts.gender === "man";
+  const genderCtx = isMale ? "male" : "female";
+  const pronoun = isMale ? "He" : "She";
+  const possessive = isMale ? "His" : "Her";
+  const skinDesc = opts.skinTone ? SKIN_TONE_DESCRIPTIONS[opts.skinTone] ?? opts.skinTone : "medium beige";
+  const sizeCtx = opts.topSize ? `, size ${opts.topSize}` : "";
+  return `Professional fashion editorial photograph. Full-length shot of a ${genderCtx} model with ${skinDesc} skin tone${sizeCtx}, standing against a clean minimal studio backdrop (soft grey). ${pronoun} is wearing: ${clothingItems}. ${possessive} hair is styled: ${hairDesc}. ${possessive} makeup: ${makeupDesc}. The look has a ${look.vibe} aesthetic. Professional lighting, sharp focus, full body visible from head to toe. IMPORTANT: The model's skin tone must be ${skinDesc} — do not lighten or alter the skin colour.`;
 }
 
 function getHotspotsForLook(items: ItemWithCategory[]) {
@@ -82,16 +95,29 @@ router.post("/generate", async (req, res) => {
       profile.avoidKeywords?.length ? `Avoid: ${profile.avoidKeywords.join(", ")}.` : "",
     ].filter(Boolean).join(" ") : "";
 
+    // Brand tier recommendations matched to budget
+    const getBrandTier = (budget: number | undefined): string => {
+      if (!budget) return "Mix brands across all price points appropriately for the style.";
+      if (budget <= 50) return "BUDGET TIER: Use only fast-fashion/value brands — Shein, Primark, H&M (sale), Boohoo, PrettyLittleThing, Forever 21, Target, ASOS (sale). Keep individual items under $25. Do NOT suggest luxury or mid-tier brands.";
+      if (budget <= 100) return "HIGH STREET TIER: Use affordable high-street brands — Zara, H&M, Mango, ASOS, Uniqlo, Gap, Urban Outfitters, Topshop. Keep individual items under $60. Avoid luxury brands.";
+      if (budget <= 250) return "MID-RANGE TIER: Use contemporary brands — Free People, Anthropologie, Madewell, COS, Banana Republic, Reiss, Whistles, Ted Baker, & Other Stories, Club Monaco. Mix of $30–$120 items.";
+      if (budget <= 500) return "PREMIUM TIER: Use premium contemporary brands — AllSaints, Sandro, Maje, Reformation, Rag & Bone (basics), Veronica Beard, Alice + Olivia, Ba&sh, Isabel Marant Étoile. Items $50–$250.";
+      if (budget <= 1000) return "LUXURY CONTEMPORARY TIER: Use luxury accessible brands — Theory, Vince, A.L.C., Khaite, Toteme, Zimmermann, Jacquemus, Bottega Veneta (accessories). Items $100–$600.";
+      return "LUXURY TIER: Use high-end luxury brands — Celine, Saint Laurent, Loewe, The Row, Bottega Veneta, Loro Piana, Brunello Cucinelli, Chanel, Prada. Source from Net-a-Porter, Farfetch, Ssense, Matches, Mytheresa.";
+    };
+
     const budgetText = maxBudget
-      ? `IMPORTANT: Each complete look MUST have a total cost under $${maxBudget}. Prioritise affordable items — mix high-street and premium only if budget allows.`
-      : "";
+      ? `IMPORTANT: Each complete look MUST have a total cost under $${maxBudget}. ${getBrandTier(maxBudget)}`
+      : getBrandTier(undefined);
 
     const systemPrompt = `You are a world-class personal stylist. Create complete, shoppable outfit looks with real purchasable items from actual retailer websites.
 
 Retailer priority:
 1. LOCAL retailers shipping to / operating in the user's location (if provided)
 2. REGIONAL retailers serving their market
-3. GLOBAL retailers: Zara, ASOS, H&M, Free People, Anthropologie, Revolve, Nordstrom, Net-a-Porter, Farfetch, Mango, Reformation, Urban Outfitters, Madewell, SSENSE, Saks Fifth Avenue, Selfridges, ASOS, Boohoo, PrettyLittleThing
+3. GLOBAL retailers appropriate to the budget tier specified below
+
+CRITICAL: Brand recommendations MUST match the budget tier specified. Do not mix luxury brands into budget looks or vice versa.
 
 Return ONLY valid JSON. No markdown. No code fences.`;
 

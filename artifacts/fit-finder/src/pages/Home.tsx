@@ -87,12 +87,40 @@ export default function Home() {
   const [loadingPhase, setLoadingPhase] = useState<"outfits" | "images">("outfits");
   const [isGenerating, setIsGenerating] = useState(false);
 
+  const [sizeSystem, setSizeSystem] = useState<"US" | "AU" | "EU">("US");
   const [sizes, setSizes] = useState({
     top: "",
     bottom: "",
     shoes: "",
     dress: ""
   });
+
+  const SIZE_OPTIONS = {
+    top: {
+      US: ['XS', 'S', 'M', 'L', 'XL', '2XL'],
+      AU: ['6', '8', '10', '12', '14', '16', '18', '20'],
+      EU: ['32', '34', '36', '38', '40', '42', '44', '46'],
+    },
+    dress: {
+      US: ['0', '2', '4', '6', '8', '10', '12', '14', '16'],
+      AU: ['4', '6', '8', '10', '12', '14', '16', '18', '20'],
+      EU: ['30', '32', '34', '36', '38', '40', '42', '44', '46'],
+    },
+    shoes: {
+      US: ['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11'],
+      AU: ['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11'],
+      EU: ['35', '35.5', '36', '37', '37.5', '38', '38.5', '39', '40', '40.5', '41', '42'],
+    },
+  };
+
+  // When size system changes, clear existing size selections since they're incompatible
+  const handleSizeSystemChange = (system: "US" | "AU" | "EU") => {
+    setSizeSystem(system);
+    setSizes({ top: "", bottom: "", shoes: "", dress: "" });
+  };
+
+  // Format size with system label so AI knows the reference
+  const labelledSize = (val: string) => val ? `${val} (${sizeSystem})` : "";
   
   const generateMutation = useGenerateOutfits();
 
@@ -106,7 +134,12 @@ export default function Home() {
         prompt, 
         numLooks: 4, 
         maxBudget,
-        userSizes: sizes,
+        userSizes: {
+          top: labelledSize(sizes.top),
+          bottom: labelledSize(sizes.bottom),
+          shoes: labelledSize(sizes.shoes),
+          dress: labelledSize(sizes.dress),
+        },
         userProfile: profile as any
       }
     }, {
@@ -233,52 +266,75 @@ export default function Home() {
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden"
                       >
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/5">
+                        <div className="mt-4 pt-4 border-t border-white/5 space-y-4">
+                          {/* Size system toggle */}
                           <div className="space-y-2">
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Top Size</label>
-                            <select 
-                              value={sizes.top}
-                              onChange={(e) => setSizes(prev => ({...prev, top: e.target.value}))}
-                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none text-foreground"
-                            >
-                              <option value="">Select</option>
-                              {['XS', 'S', 'M', 'L', 'XL', '2XL'].map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Bottom Size</label>
-                            <input 
-                              type="text"
-                              placeholder="e.g. 28x30 or M"
-                              value={sizes.bottom}
-                              onChange={(e) => setSizes(prev => ({...prev, bottom: e.target.value}))}
-                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none text-foreground"
-                            />
+                            <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Size System</label>
+                            <div className="flex gap-2">
+                              {(["US", "AU", "EU"] as const).map(sys => (
+                                <button
+                                  key={sys}
+                                  onClick={() => handleSizeSystemChange(sys)}
+                                  className={cn(
+                                    "px-4 py-1.5 text-xs rounded-full border transition-all",
+                                    sizeSystem === sys
+                                      ? "bg-primary text-primary-foreground border-primary"
+                                      : "bg-black/40 border-white/10 hover:border-white/30 text-muted-foreground"
+                                  )}
+                                >
+                                  {sys}
+                                </button>
+                              ))}
+                            </div>
                           </div>
 
-                          <div className="space-y-2">
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Shoe Size (US)</label>
-                            <select 
-                              value={sizes.shoes}
-                              onChange={(e) => setSizes(prev => ({...prev, shoes: e.target.value}))}
-                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none text-foreground"
-                            >
-                              <option value="">Select</option>
-                              {['5', '5.5', '6', '6.5', '7', '7.5', '8', '8.5', '9', '9.5', '10', '10.5', '11'].map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Top Size</label>
+                              <select 
+                                value={sizes.top}
+                                onChange={(e) => setSizes(prev => ({...prev, top: e.target.value}))}
+                                className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none text-foreground"
+                              >
+                                <option value="">Select</option>
+                                {SIZE_OPTIONS.top[sizeSystem].map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Bottom Size</label>
+                              <input 
+                                type="text"
+                                placeholder={sizeSystem === "US" ? "e.g. 28x30 or M" : sizeSystem === "AU" ? "e.g. 10 or 28" : "e.g. 38 or 28"}
+                                value={sizes.bottom}
+                                onChange={(e) => setSizes(prev => ({...prev, bottom: e.target.value}))}
+                                className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none text-foreground"
+                              />
+                            </div>
 
-                          <div className="space-y-2">
-                            <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Dress Size</label>
-                            <select 
-                              value={sizes.dress}
-                              onChange={(e) => setSizes(prev => ({...prev, dress: e.target.value}))}
-                              className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none text-foreground"
-                            >
-                              <option value="">Select</option>
-                              {['0', '2', '4', '6', '8', '10', '12', '14', '16'].map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
+                            <div className="space-y-2">
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Shoe Size ({sizeSystem})</label>
+                              <select 
+                                value={sizes.shoes}
+                                onChange={(e) => setSizes(prev => ({...prev, shoes: e.target.value}))}
+                                className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none text-foreground"
+                              >
+                                <option value="">Select</option>
+                                {SIZE_OPTIONS.shoes[sizeSystem].map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Dress Size</label>
+                              <select 
+                                value={sizes.dress}
+                                onChange={(e) => setSizes(prev => ({...prev, dress: e.target.value}))}
+                                className="w-full h-10 bg-black/40 border border-white/10 rounded px-3 text-sm focus:border-primary outline-none text-foreground"
+                              >
+                                <option value="">Select</option>
+                                {SIZE_OPTIONS.dress[sizeSystem].map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
                           </div>
                         </div>
                       </motion.div>
