@@ -45,7 +45,7 @@ function buildImagePrompt(
   const possessive = isMale ? "His" : "Her";
   const skinDesc = opts.skinTone ? SKIN_TONE_DESCRIPTIONS[opts.skinTone] ?? opts.skinTone : "medium beige";
   const sizeCtx = opts.topSize ? `, size ${opts.topSize}` : "";
-  return `Professional fashion editorial photograph. Full-length shot of a ${genderCtx} model with ${skinDesc} skin tone${sizeCtx}, standing against a clean minimal studio backdrop (soft grey). ${pronoun} is wearing: ${clothingItems}. ${possessive} hair is styled: ${hairDesc}. ${possessive} makeup: ${makeupDesc}. The look has a ${look.vibe} aesthetic. Professional lighting, sharp focus, full body visible from head to toe. IMPORTANT: The model's skin tone must be ${skinDesc} — do not lighten or alter the skin colour.`;
+  return `High-end fashion editorial photograph on a pure light grey studio backdrop. The ${genderCtx} model has ${skinDesc} skin${sizeCtx}. FRAMING: Full body from crown of head to soles of shoes — the entire head (hair, face, eyes, lips) and both complete shoes/feet must be visible in frame. Do not crop any part of the body. ${pronoun} is styled in: ${clothingItems}. Hair: ${hairDesc}. Makeup visible on face: ${makeupDesc}. Overall aesthetic: ${look.vibe}. Technical: shot on Phase One medium format, 80mm lens, softbox lighting, sharp focus across entire body, colour-accurate skin. IMPORTANT: skin tone is ${skinDesc} — render accurately, do not lighten or darken.`;
 }
 
 function getHotspotsForLook(items: ItemWithCategory[]) {
@@ -221,22 +221,11 @@ router.post("/model-image", async (req, res) => {
       gender?: string; age?: number; skinTone?: string;
     } | undefined;
 
-    const clothingItems = look.items
-      .filter(i => !["Hair", "Makeup"].includes(i.category))
-      .map(i => `${i.color} ${i.name} (${i.category}) by ${i.brand}`)
-      .join(", ");
-
-    const hairItem = look.items.find(i => i.category === "Hair");
-    const makeupItem = look.items.find(i => i.category === "Makeup");
-
-    const hairDesc = hairItem ? hairItem.description : "natural styled hair";
-    const makeupDesc = makeupItem ? `${makeupItem.name} — ${makeupItem.description}` : "natural makeup";
-
-    const sizeContext = userSizes?.top ? `wearing size ${userSizes.top}` : "";
-    const genderContext = profile?.gender === "man" ? "male" : "female";
-    const skinContext = profile?.skinTone ? `with ${profile.skinTone} skin tone` : "";
-
-    const imagePrompt = `Professional fashion editorial photograph. Full-length shot of a ${genderContext} model ${skinContext} ${sizeContext} standing against a clean minimal studio backdrop (soft grey). She is wearing: ${clothingItems}. Her hair is styled: ${hairDesc}. Full makeup: ${makeupDesc}. The look has a ${look.vibe} aesthetic. Professional lighting, sharp focus, full body visible from head to toe.`;
+    const imagePrompt = buildImagePrompt(look as unknown as LookShape, {
+      gender: profile?.gender,
+      skinTone: profile?.skinTone,
+      topSize: userSizes?.top,
+    });
 
     const imageBuffer = await generateImageBuffer(imagePrompt, "1024x1024");
     const b64 = imageBuffer.toString("base64");

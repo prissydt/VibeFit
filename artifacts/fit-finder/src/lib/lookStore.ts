@@ -13,6 +13,9 @@ const imageCache = new Map<string, { modelImageB64: string; hotspots: any[] }>()
 
 export const lookStore = {
   set: (d: LookData) => {
+    // Clear stale cache entries for any look IDs being replaced
+    d.looks.forEach((look) => imageCache.delete(look.id));
+
     // Separate images into the memory cache before persisting
     const looksWithoutImages = d.looks.map((look) => {
       if (look.modelImageB64) {

@@ -20,9 +20,10 @@ const CategoryIcon = ({ category, className }: { category: string, className?: s
 interface ModelViewProps {
   look: OutfitLook;
   userSizes?: any;
+  userProfile?: any;
 }
 
-export function ModelView({ look, userSizes }: ModelViewProps) {
+export function ModelView({ look, userSizes, userProfile }: ModelViewProps) {
   const [modelImageB64, setModelImageB64] = useState<string | null>(look.modelImageB64 || null);
   const [hotspots, setHotspots] = useState<ItemHotspot[]>(look.hotspots || []);
   const [activeHotspot, setActiveHotspot] = useState<number | null>(null);
@@ -35,7 +36,8 @@ export function ModelView({ look, userSizes }: ModelViewProps) {
       generateImageMutation.mutate({
         data: {
           look,
-          userSizes
+          userSizes,
+          userProfile,
         }
       }, {
         onSuccess: (res) => {

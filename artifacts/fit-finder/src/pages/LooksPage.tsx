@@ -6,7 +6,7 @@ import { ModelView } from "@/components/ModelView";
 import { ItemRow } from "@/components/ItemRow";
 import { lookStore } from "@/lib/lookStore";
 import { useCart } from "@/context/CartContext";
-import { useSaveOutfit, useGenerateOutfits, generateModelImage } from "@workspace/api-client-react";
+import { useSaveOutfit, useGenerateOutfits } from "@workspace/api-client-react";
 import { profileStore } from "@/lib/profileStore";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +23,8 @@ export default function LooksPage() {
   const [swipedLooks, setSwipedLooks] = useState<Set<number>>(new Set());
   const [savedLooks, setSavedLooks] = useState<Set<string>>(new Set());
   const [refinementPrompt, setRefinementPrompt] = useState("");
+  // Increment on each regeneration so React fully remounts cards and ModelView
+  const [regenerationKey, setRegenerationKey] = useState(0);
 
   const { addFullOutfit } = useCart();
   const saveMutation = useSaveOutfit();
@@ -72,29 +74,15 @@ export default function LooksPage() {
         userProfile: profile as any,
       }
     }, {
-      onSuccess: async (newData) => {
-        // Generate all model images in parallel before showing new cards
-        const looks = (newData as any).looks as any[];
-        const imageResults = await Promise.allSettled(
-          looks.map((look) =>
-            generateModelImage({
-              look,
-              userSizes: (newData as any).userSizes,
-              userProfile: profile as any,
-            } as any)
-          )
-        );
-        imageResults.forEach((result, i) => {
-          if (result.status === "fulfilled") {
-            looks[i].modelImageB64 = result.value.modelImageB64;
-            looks[i].hotspots = result.value.hotspots;
-          }
-        });
+      onSuccess: (newData) => {
+        // Show new looks immediately — ModelView handles image loading lazily per card
         lookStore.set(newData as any);
         setData(newData as any);
         setActiveLookIndex(0);
         setSwipedLooks(new Set());
         setRefinementPrompt("");
+        // Force card remount so ModelView doesn't reuse stale images from same look IDs
+        setRegenerationKey(k => k + 1);
       },
       onError: () => {
         toast({ title: "Regeneration failed", description: "Please try again." });
@@ -210,9 +198,10 @@ export default function LooksPage() {
                 
                 return (
                   <SwipeableCard
-                    key={look.id}
+                    key={`${look.id}-${regenerationKey}`}
                     look={look}
                     userSizes={data.userSizes}
+                    userProfile={profileStore.get()}
                     isTop={idx === activeLookIndex}
                     indexOffset={idx - activeLookIndex}
                     onSwipedRight={() => handleLove(idx)}
@@ -321,14 +310,16 @@ export default function LooksPage() {
 // Separate component for the draggable card
 function SwipeableCard({ 
   look, 
-  userSizes, 
+  userSizes,
+  userProfile,
   isTop, 
   indexOffset, 
   onSwipedRight, 
   onSwipedLeft 
 }: { 
   look: any, 
-  userSizes: any, 
+  userSizes: any,
+  userProfile: any,
   isTop: boolean, 
   indexOffset: number,
   onSwipedRight: () => void,
@@ -388,7 +379,7 @@ function SwipeableCard({
           Skip ✕
         </motion.div>
       </div>
-      <ModelView look={look} userSizes={userSizes} />
+      <ModelView look={look} userSizes={userSizes} userProfile={userProfile} />
     </motion.div>
   );
 }
