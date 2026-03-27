@@ -45,7 +45,11 @@ function buildImagePrompt(
   const possessive = isMale ? "His" : "Her";
   const skinDesc = opts.skinTone ? SKIN_TONE_DESCRIPTIONS[opts.skinTone] ?? opts.skinTone : "medium beige";
   const sizeCtx = opts.topSize ? `, size ${opts.topSize}` : "";
-  return `High-end fashion editorial photograph on a pure light grey studio backdrop. The ${genderCtx} model has ${skinDesc} skin${sizeCtx}. FRAMING: Full body from crown of head to soles of shoes — the entire head (hair, face, eyes, lips) and both complete shoes/feet must be visible in frame. Do not crop any part of the body. ${pronoun} is styled in: ${clothingItems}. Hair: ${hairDesc}. Makeup visible on face: ${makeupDesc}. Overall aesthetic: ${look.vibe}. Technical: shot on Phase One medium format, 80mm lens, softbox lighting, sharp focus across entire body, colour-accurate skin. IMPORTANT: skin tone is ${skinDesc} — render accurately, do not lighten or darken.`;
+  const shoeItem = look.items.find(i => i.category === "Shoes");
+  const shoeEmphasis = shoeItem
+    ? ` SHOES: ${shoeItem.color} ${shoeItem.name} by ${shoeItem.brand} are clearly visible on both feet at the bottom of the frame.`
+    : "";
+  return `High-end fashion editorial photograph on a pure light grey studio backdrop. The ${genderCtx} model has ${skinDesc} skin${sizeCtx}. CRITICAL FRAMING RULE: This is a full-body portrait — the model's complete body from the very top of the head down to the bottom of the shoes must be fully visible, nothing cropped. Leave space above the head and below the feet.${shoeEmphasis} ${pronoun} is wearing: ${clothingItems}. Hair: ${hairDesc}. Makeup: ${makeupDesc}. Aesthetic: ${look.vibe}. Shot on Phase One medium format, 80mm lens, softbox lighting, sharp full-body focus. IMPORTANT: skin tone is ${skinDesc} — render accurately, do not alter.`;
 }
 
 function getHotspotsForLook(items: ItemWithCategory[]) {
@@ -227,7 +231,7 @@ router.post("/model-image", async (req, res) => {
       topSize: userSizes?.top,
     });
 
-    const imageBuffer = await generateImageBuffer(imagePrompt, "1024x1024");
+    const imageBuffer = await generateImageBuffer(imagePrompt, "1024x1536");
     const b64 = imageBuffer.toString("base64");
     const hotspots = getHotspotsForLook(look.items);
 
