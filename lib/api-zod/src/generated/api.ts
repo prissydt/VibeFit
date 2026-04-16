@@ -553,3 +553,88 @@ export const SaveOutfitResponse = zod.object({
     .optional(),
   savedAt: zod.date(),
 });
+
+/**
+ * @summary Get an app user
+ */
+export const GetUserParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetUserResponse = zod.object({
+  id: zod.string(),
+  email: zod.string().optional(),
+  stripeCustomerId: zod.string().optional(),
+  stripeSubscriptionId: zod.string().optional(),
+  subscriptionStatus: zod.string().optional(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Create or update an app user
+ */
+export const UpsertUserBody = zod.object({
+  id: zod.string(),
+  email: zod.string().optional(),
+});
+
+export const UpsertUserResponse = zod.object({
+  id: zod.string(),
+  email: zod.string().optional(),
+  stripeCustomerId: zod.string().optional(),
+  stripeSubscriptionId: zod.string().optional(),
+  subscriptionStatus: zod.string().optional(),
+  createdAt: zod.date(),
+  updatedAt: zod.date(),
+});
+
+/**
+ * @summary Get payment and subscription status for a user
+ */
+export const GetPaymentStatusQueryParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const GetPaymentStatusResponse = zod.object({
+  configured: zod.boolean(),
+  user: zod
+    .union([
+      zod.object({
+        id: zod.string(),
+        email: zod.string().optional(),
+        stripeCustomerId: zod.string().optional(),
+        stripeSubscriptionId: zod.string().optional(),
+        subscriptionStatus: zod.string().optional(),
+        createdAt: zod.date(),
+        updatedAt: zod.date(),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+  subscriptionStatus: zod.union([zod.string(), zod.null()]),
+  hasActiveSubscription: zod.boolean(),
+});
+
+/**
+ * @summary Create a Stripe checkout session
+ */
+export const CreateCheckoutSessionBody = zod.object({
+  userId: zod.string(),
+  email: zod.string().optional(),
+});
+
+export const CreateCheckoutSessionResponse = zod.object({
+  url: zod.string(),
+});
+
+/**
+ * @summary Create a Stripe billing portal session
+ */
+export const CreateBillingPortalSessionBody = zod.object({
+  userId: zod.string(),
+});
+
+export const CreateBillingPortalSessionResponse = zod.object({
+  url: zod.string(),
+});

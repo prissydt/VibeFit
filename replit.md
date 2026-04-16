@@ -14,6 +14,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **TypeScript version**: 5.9
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
+- **Payments**: Stripe-ready checkout and billing portal routes; Stripe was not connected during setup, so runtime payment processing requires connecting Stripe or adding `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, and `STRIPE_WEBHOOK_SECRET` as secrets.
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
@@ -57,16 +58,26 @@ artifacts-monorepo/
 - `GET /api/outfits/saved/:id` — Get a specific saved outfit
 - `DELETE /api/outfits/saved/:id` — Delete a saved outfit
 - `POST /api/outfits/save` — Save an outfit with optional sizes
+- `GET /api/users/:id` — Get app user/account record
+- `PUT /api/users` — Create/update app user with email
+- `GET /api/payments/status` — Get payment configuration and subscription status
+- `POST /api/payments/checkout` — Create Stripe checkout session when configured
+- `POST /api/payments/portal` — Open Stripe billing portal when configured
 
 ## Database Tables
 
 - `saved_outfits` — Stores saved outfit looks (prompt, look JSON, userSizes JSON, savedAt)
+- `user_profiles` — Stores style profile preferences by profile ID
+- `users` — Stores account email and Stripe customer/subscription references
 
 ## Environment Variables
 
 - `DATABASE_URL` — PostgreSQL connection string (auto-provisioned)
 - `AI_INTEGRATIONS_OPENAI_BASE_URL` — Replit AI Integrations proxy URL
 - `AI_INTEGRATIONS_OPENAI_API_KEY` — Replit AI Integrations key
+- `STRIPE_SECRET_KEY` — Stripe secret key required for live checkout if Stripe is not connected through Replit
+- `STRIPE_PRICE_ID` — Stripe price ID used for the Fit Finder Pro subscription checkout
+- `STRIPE_WEBHOOK_SECRET` — Stripe webhook signing secret for subscription status updates
 
 ## TypeScript & Composite Projects
 

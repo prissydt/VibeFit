@@ -102,6 +102,41 @@ export interface UpsertProfileRequest {
   likedLookIds?: string[];
 }
 
+export interface AppUser {
+  id: string;
+  email?: string;
+  stripeCustomerId?: string;
+  stripeSubscriptionId?: string;
+  subscriptionStatus?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertUserRequest {
+  id: string;
+  email?: string;
+}
+
+export interface PaymentStatus {
+  configured: boolean;
+  user?: AppUser | null;
+  subscriptionStatus: string | null;
+  hasActiveSubscription: boolean;
+}
+
+export interface CreateCheckoutSessionRequest {
+  userId: string;
+  email?: string;
+}
+
+export interface CreateBillingPortalSessionRequest {
+  userId: string;
+}
+
+export interface CheckoutSessionResponse {
+  url: string;
+}
+
 export interface GenerateOutfitsRequest {
   prompt: string;
   numLooks?: number;
@@ -190,4 +225,8 @@ export type GetSavedOutfitsParams = {
    * Filter saved outfits by profile ID
    */
   profileId?: string;
+};
+
+export type GetPaymentStatusParams = {
+  userId: string;
 };

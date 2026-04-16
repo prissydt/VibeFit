@@ -1,6 +1,7 @@
 export interface UserProfile {
   profileId: string;
   name?: string;
+  email?: string;
   gender?: "woman" | "man" | "non-binary" | "prefer-not-to-say";
   age?: number;
   skinTone?: "fair" | "light" | "medium" | "olive" | "tan" | "deep" | "rich";

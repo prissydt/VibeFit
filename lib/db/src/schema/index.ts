@@ -19,3 +19,4 @@
 
 export * from "./outfits";
 export * from "./profiles";
+export * from "./users";

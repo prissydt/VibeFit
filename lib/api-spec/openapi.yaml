@@ -9,6 +9,8 @@ tags:
   - name: health
   - name: outfits
   - name: profile
+  - name: users
+  - name: payments
 paths:
   /healthz:
     get:
@@ -198,6 +200,113 @@ paths:
               schema:
                 $ref: "#/components/schemas/SavedOutfit"
 
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get an app user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: App user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppUser"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users:
+    put:
+      operationId: upsertUser
+      tags: [users]
+      summary: Create or update an app user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertUserRequest"
+      responses:
+        "200":
+          description: Saved user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppUser"
+
+  /payments/status:
+    get:
+      operationId: getPaymentStatus
+      tags: [payments]
+      summary: Get payment and subscription status for a user
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Payment status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentStatus"
+
+  /payments/checkout:
+    post:
+      operationId: createCheckoutSession
+      tags: [payments]
+      summary: Create a Stripe checkout session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCheckoutSessionRequest"
+      responses:
+        "200":
+          description: Checkout session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSessionResponse"
+        "503":
+          description: Stripe not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /payments/portal:
+    post:
+      operationId: createBillingPortalSession
+      tags: [payments]
+      summary: Create a Stripe billing portal session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBillingPortalSessionRequest"
+      responses:
+        "200":
+          description: Billing portal session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSessionResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -308,6 +417,76 @@ components:
           items:
             type: string
       required: [profileId]
+
+    AppUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        stripeCustomerId:
+          type: string
+        stripeSubscriptionId:
+          type: string
+        subscriptionStatus:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, createdAt, updatedAt]
+
+    UpsertUserRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+      required: [id]
+
+    PaymentStatus:
+      type: object
+      properties:
+        configured:
+          type: boolean
+        user:
+          anyOf:
+            - $ref: "#/components/schemas/AppUser"
+            - type: "null"
+        subscriptionStatus:
+          anyOf:
+            - type: string
+            - type: "null"
+        hasActiveSubscription:
+          type: boolean
+      required: [configured, subscriptionStatus, hasActiveSubscription]
+
+    CreateCheckoutSessionRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+        email:
+          type: string
+      required: [userId]
+
+    CreateBillingPortalSessionRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+      required: [userId]
+
+    CheckoutSessionResponse:
+      type: object
+      properties:
+        url:
+          type: string
+      required: [url]
 
     GenerateOutfitsRequest:
       type: object

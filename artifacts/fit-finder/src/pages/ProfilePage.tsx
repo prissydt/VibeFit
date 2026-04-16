@@ -4,9 +4,9 @@ import { ProfileForm } from "@/components/ProfileForm";
 import { profileStore } from "@/lib/profileStore";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "wouter";
-import { User, RefreshCw, ArrowRight, Image as ImageIcon, Loader2 } from "lucide-react";
+import { User, RefreshCw, ArrowRight, Image as ImageIcon, Loader2, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useGetSavedOutfits, useDeleteSavedOutfit } from "@workspace/api-client-react";
+import { useGetSavedOutfits, useDeleteSavedOutfit, useGetPaymentStatus, useCreateCheckoutSession, useCreateBillingPortalSession } from "@workspace/api-client-react";
 import { formatPrice } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
 
@@ -27,7 +27,10 @@ export default function ProfilePage() {
 
   const p = profileStore.get();
   const { data: savedData, isLoading: savedLoading, refetch: refetchSaved } = useGetSavedOutfits({ profileId: p.profileId });
+  const { data: paymentStatus, refetch: refetchPaymentStatus } = useGetPaymentStatus({ userId: p.profileId });
   const deleteMutation = useDeleteSavedOutfit();
+  const checkoutMutation = useCreateCheckoutSession();
+  const portalMutation = useCreateBillingPortalSession();
 
   const handleDeleteSaved = (id: number, e: React.MouseEvent) => {
     e.preventDefault();
@@ -41,6 +44,41 @@ export default function ProfilePage() {
       toast({ title: "Profile reset successfully" });
       window.location.reload();
     }
+  };
+
+  const handleCheckout = () => {
+    checkoutMutation.mutate(
+      { data: { userId: p.profileId, email: p.email } },
+      {
+        onSuccess: (data) => {
+          if (data.url) window.location.href = data.url;
+        },
+        onError: (err: any) => {
+          toast({
+            title: "Payments are not active yet",
+            description: err?.data?.error ?? err?.message ?? "Connect Stripe or add payment credentials to enable checkout.",
+          });
+          refetchPaymentStatus();
+        },
+      },
+    );
+  };
+
+  const handleBillingPortal = () => {
+    portalMutation.mutate(
+      { data: { userId: p.profileId } },
+      {
+        onSuccess: (data) => {
+          if (data.url) window.location.href = data.url;
+        },
+        onError: (err: any) => {
+          toast({
+            title: "Billing portal unavailable",
+            description: err?.data?.error ?? err?.message ?? "No billing account is connected for this profile yet.",
+          });
+        },
+      },
+    );
   };
 
   return (
@@ -111,6 +149,44 @@ export default function ProfilePage() {
         </div>
 
         {/* Saved Looks */}
+        <div className="w-full glass-panel p-6 rounded-xl space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-serif flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-primary" />
+                Payments
+              </h2>
+              <p className="text-sm text-muted-foreground mt-2">
+                Upgrade to Fit Finder Pro for saved account billing and premium styling features.
+              </p>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs uppercase tracking-wider">
+              {paymentStatus?.hasActiveSubscription ? "Active" : "Free"}
+            </span>
+          </div>
+
+          {!paymentStatus?.configured && (
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-100">
+              Stripe checkout is wired in but not active yet. Connect Stripe or add payment credentials to enable real payments.
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            {paymentStatus?.hasActiveSubscription ? (
+              <Button onClick={handleBillingPortal} disabled={portalMutation.isPending}>
+                {portalMutation.isPending ? "Opening..." : "Manage billing"}
+              </Button>
+            ) : (
+              <Button onClick={handleCheckout} disabled={checkoutMutation.isPending || !p.email}>
+                {checkoutMutation.isPending ? "Opening..." : "Upgrade with Stripe"}
+              </Button>
+            )}
+            {!p.email && (
+              <p className="text-xs text-muted-foreground self-center">Add your email below before checkout.</p>
+            )}
+          </div>
+        </div>
+
         <div className="w-full space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-serif">Saved Looks</h2>

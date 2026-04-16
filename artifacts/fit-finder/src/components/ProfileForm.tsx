@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { profileStore, type UserProfile } from "@/lib/profileStore";
-import { useUpsertProfile } from "@workspace/api-client-react";
+import { useUpsertProfile, useUpsertUser } from "@workspace/api-client-react";
 import { X, Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ export function ProfileForm() {
   const [styleInput, setStyleInput] = useState("");
   const [avoidInput, setAvoidInput] = useState("");
   const upsertMutation = useUpsertProfile();
+  const upsertUserMutation = useUpsertUser();
   
   const timeoutRef = useRef<NodeJS.Timeout>();
 
@@ -30,6 +31,12 @@ export function ProfileForm() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
       upsertMutation.mutate({ data: newProfile as any });
+      upsertUserMutation.mutate({
+        data: {
+          id: newProfile.profileId,
+          email: newProfile.email || undefined,
+        },
+      });
     }, 1000);
   };
 
@@ -87,6 +94,17 @@ export function ProfileForm() {
             className="bg-black/40 border-white/10"
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-[10px] text-muted-foreground uppercase tracking-widest">Email for purchases and receipts</label>
+        <Input
+          type="email"
+          value={profile.email || ""}
+          onChange={e => handleChange({ email: e.target.value })}
+          placeholder="you@example.com"
+          className="bg-black/40 border-white/10"
+        />
       </div>
 
       <div className="space-y-2">
