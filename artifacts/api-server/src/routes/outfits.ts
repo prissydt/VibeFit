@@ -6,11 +6,11 @@ import {
   SaveOutfitBody,
   GetSavedOutfitParams,
   DeleteSavedOutfitParams,
-  GetSavedOutfitsQueryParams,
 } from "@workspace/api-zod";
-import { openai } from "@workspace/integrations-openai-ai-server";
 import { generateImageBuffer } from "@workspace/integrations-openai-ai-server/image";
 import { eq } from "drizzle-orm";
+import { generateLimiter, modelImageLimiter, rateLimit } from "../lib/rateLimit";
+import { assembleOutfits } from "../lib/outfitAssembler";
 
 const router: IRouter = Router();
 
@@ -42,7 +42,6 @@ function buildImagePrompt(
   const isMale = opts.gender === "man";
   const genderCtx = isMale ? "male" : "female";
   const pronoun = isMale ? "He" : "She";
-  const possessive = isMale ? "His" : "Her";
   const skinDesc = opts.skinTone ? SKIN_TONE_DESCRIPTIONS[opts.skinTone] ?? opts.skinTone : "medium beige";
   const sizeCtx = opts.topSize ? `, size ${opts.topSize}` : "";
   const shoeItem = look.items.find(i => i.category === "Shoes");
@@ -72,7 +71,7 @@ function getHotspotsForLook(items: ItemWithCategory[]) {
 }
 
 // POST /outfits/generate
-router.post("/generate", async (req, res) => {
+router.post("/generate", rateLimit(generateLimiter), async (req, res) => {
   try {
     const body = GenerateOutfitsBody.parse(req.body);
     const numLooks = body.numLooks ?? 4;
@@ -84,118 +83,16 @@ router.post("/generate", async (req, res) => {
       sizes?: { top?: string; bottom?: string; shoes?: string; dress?: string };
     } | undefined;
 
-    // Build profile context for AI
     const effectiveSizes = userSizes ?? profile?.sizes;
-    const sizesText = effectiveSizes
-      ? `Sizes: Top ${effectiveSizes.top || "unspecified"}, Bottom ${effectiveSizes.bottom || "unspecified"}, Shoes (US) ${effectiveSizes.shoes || "unspecified"}${effectiveSizes.dress ? `, Dress ${effectiveSizes.dress}` : ""}.`
-      : "";
 
-    const profileText = profile ? [
-      profile.gender && profile.gender !== "prefer-not-to-say" ? `Gender: ${profile.gender}.` : "",
-      profile.age ? `Age: ${profile.age}.` : "",
-      profile.skinTone ? `Skin tone: ${profile.skinTone} — recommend makeup shades that complement this tone.` : "",
-      profile.location ? `Location: ${profile.location} — prioritise brands and retailers that ship to or operate locally in this region before recommending global retailers.` : "",
-      profile.stylePreferences?.length ? `Loves: ${profile.stylePreferences.join(", ")}.` : "",
-      profile.avoidKeywords?.length ? `Avoid: ${profile.avoidKeywords.join(", ")}.` : "",
-    ].filter(Boolean).join(" ") : "";
-
-    // Brand tier recommendations matched to budget
-    const getBrandTier = (budget: number | undefined): string => {
-      if (!budget) return "Mix brands across all price points appropriately for the style.";
-      if (budget <= 50) return "BUDGET TIER: Use only fast-fashion/value brands — Shein, Primark, H&M (sale), Boohoo, PrettyLittleThing, Forever 21, Target, ASOS (sale). Keep individual items under $25. Do NOT suggest luxury or mid-tier brands.";
-      if (budget <= 100) return "HIGH STREET TIER: Use affordable high-street brands — Zara, H&M, Mango, ASOS, Uniqlo, Gap, Urban Outfitters, Topshop. Keep individual items under $60. Avoid luxury brands.";
-      if (budget <= 250) return "MID-RANGE TIER: Use contemporary brands — Free People, Anthropologie, Madewell, COS, Banana Republic, Reiss, Whistles, Ted Baker, & Other Stories, Club Monaco. Mix of $30–$120 items.";
-      if (budget <= 500) return "PREMIUM TIER: Use premium contemporary brands — AllSaints, Sandro, Maje, Reformation, Rag & Bone (basics), Veronica Beard, Alice + Olivia, Ba&sh, Isabel Marant Étoile. Items $50–$250.";
-      if (budget <= 1000) return "LUXURY CONTEMPORARY TIER: Use luxury accessible brands — Theory, Vince, A.L.C., Khaite, Toteme, Zimmermann, Jacquemus, Bottega Veneta (accessories). Items $100–$600.";
-      return "LUXURY TIER: Use high-end luxury brands — Celine, Saint Laurent, Loewe, The Row, Bottega Veneta, Loro Piana, Brunello Cucinelli, Chanel, Prada. Source from Net-a-Porter, Farfetch, Ssense, Matches, Mytheresa.";
-    };
-
-    const budgetText = maxBudget
-      ? `IMPORTANT: Each complete look MUST have a total cost under $${maxBudget}. ${getBrandTier(maxBudget)}`
-      : getBrandTier(undefined);
-
-    const systemPrompt = `You are a world-class personal stylist. Create complete, shoppable outfit looks with real purchasable items from actual retailer websites.
-
-Retailer priority:
-1. LOCAL retailers shipping to / operating in the user's location (if provided)
-2. REGIONAL retailers serving their market
-3. GLOBAL retailers appropriate to the budget tier specified below
-
-CRITICAL: Brand recommendations MUST match the budget tier specified. Do not mix luxury brands into budget looks or vice versa.
-
-Return ONLY valid JSON. No markdown. No code fences.`;
-
-    const userPrompt = `Create ${numLooks} DISTINCT outfit looks inspired by: "${body.prompt}"
-
-${profileText}
-${sizesText}
-${budgetText}
-
-Each look MUST be a completely different aesthetic/style. Include ALL item categories:
-- Top OR Dress (choose one per look)
-- Bottom (skip if using Dress)
-- Shoes
-- Bag
-- Jewelry (earrings, necklace, bracelet, or ring — be specific)
-- Accessories (sunglasses, hat, belt, scarf, or watch — be specific)
-- Makeup (specify EXACT products: e.g. "MAC Matte Lipstick in Ruby Woo" — include the actual shade name and product)
-- Hair (specific product recommendation: dry shampoo, hair oil, styling cream, etc.)
-
-For Makeup, include a SPECIFIC product with an exact shade/color that complements the user's skin tone (${profile?.skinTone || "medium"}) and the look's vibe. Include the exact product page URL.
-
-Return JSON:
-{
-  "looks": [
-    {
-      "id": "look-1",
-      "title": "Look title",
-      "vibe": "One sentence vibe description",
-      "styleNotes": "2-3 sentences of styling tips",
-      "totalCost": 0,
-      "items": [
-        {
-          "category": "Top",
-          "name": "Exact Product Name",
-          "brand": "Brand Name",
-          "description": "Brief description",
-          "price": 45.99,
-          "purchaseUrl": "https://www.brandwebsite.com/products/exact-product",
-          "color": "specific color/shade name"
-        }
-      ]
-    }
-  ]
-}
-
-Calculate totalCost as the sum of all item prices.${maxBudget ? ` Every look MUST be under $${maxBudget}.` : ""}`;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-5.2",
-      max_completion_tokens: 8192,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      response_format: { type: "json_object" },
-    });
-
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      res.status(500).json({ error: "No response from AI" });
-      return;
-    }
-
-    const parsed = JSON.parse(content);
-    const looks = (parsed.looks || []) as Array<{
-      id: string;
-      totalCost: number;
-      items: ItemWithCategory[];
-    }>;
-
-    looks.forEach((look, i) => {
-      look.id = `look-${i + 1}`;
-      const total = look.items.reduce((sum, item) => sum + ((item as { price?: number }).price || 0), 0);
-      look.totalCost = Math.round(total * 100) / 100;
+    const looks = await assembleOutfits({
+      prompt: body.prompt,
+      numLooks,
+      maxBudget,
+      gender: profile?.gender,
+      preferredColors: profile?.stylePreferences?.filter(p => p.startsWith("color:")).map(p => p.slice(6)) ?? [],
+      avoidKeywords: profile?.avoidKeywords ?? [],
+      location: profile?.location,
     });
 
     res.json({
@@ -211,7 +108,7 @@ Calculate totalCost as the sum of all item prices.${maxBudget ? ` Every look MUS
 });
 
 // POST /outfits/model-image
-router.post("/model-image", async (req, res) => {
+router.post("/model-image", rateLimit(modelImageLimiter), async (req, res) => {
   try {
     const body = GenerateModelImageBody.parse(req.body);
     const look = body.look as {
@@ -245,12 +142,11 @@ router.post("/model-image", async (req, res) => {
 // GET /outfits/saved
 router.get("/saved", async (req, res) => {
   try {
-    const { profileId } = GetSavedOutfitsQueryParams.parse(req.query);
-    const query = db.select().from(savedOutfitsTable);
-    const outfits = await (profileId
-      ? query.where(eq(savedOutfitsTable.profileId, profileId))
-      : query
-    ).orderBy(savedOutfitsTable.savedAt);
+    const outfits = await db
+      .select()
+      .from(savedOutfitsTable)
+      .where(eq(savedOutfitsTable.profileId, req.deviceId))
+      .orderBy(savedOutfitsTable.savedAt);
     res.json({ outfits: outfits.reverse() });
   } catch (err) {
     req.log.error({ err }, "Failed to fetch saved outfits");
@@ -267,6 +163,10 @@ router.get("/saved/:id", async (req, res) => {
       res.status(404).json({ error: "Outfit not found" });
       return;
     }
+    if (outfit.profileId !== req.deviceId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
     res.json(outfit);
   } catch (err) {
     req.log.error({ err }, "Failed to fetch saved outfit");
@@ -278,6 +178,15 @@ router.get("/saved/:id", async (req, res) => {
 router.delete("/saved/:id", async (req, res) => {
   try {
     const { id } = DeleteSavedOutfitParams.parse(req.params);
+    const [outfit] = await db.select().from(savedOutfitsTable).where(eq(savedOutfitsTable.id, id));
+    if (!outfit) {
+      res.status(404).json({ error: "Outfit not found" });
+      return;
+    }
+    if (outfit.profileId !== req.deviceId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
     await db.delete(savedOutfitsTable).where(eq(savedOutfitsTable.id, id));
     res.json({ success: true });
   } catch (err) {
@@ -292,12 +201,11 @@ router.post("/save", async (req, res) => {
     const body = SaveOutfitBody.parse(req.body);
     const look = outfitLookSchema.parse(body.look);
     const userSizes = body.userSizes ? userSizesSchema.parse(body.userSizes) : null;
-    const profileId = (body as { profileId?: string }).profileId ?? null;
 
     const [saved] = await db
       .insert(savedOutfitsTable)
       .values({
-        profileId,
+        profileId: req.deviceId,
         prompt: body.prompt,
         look: look as object,
         userSizes: userSizes as object,

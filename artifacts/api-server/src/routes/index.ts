@@ -1,4 +1,6 @@
 import { Router, type IRouter } from "express";
+import { requireDevice } from "../middlewares/requireDevice";
+import { generalLimiter, rateLimit } from "../lib/rateLimit";
 import healthRouter from "./health";
 import outfitsRouter from "./outfits";
 import profileRouter from "./profile";
@@ -6,6 +8,9 @@ import usersRouter from "./users";
 import paymentsRouter from "./payments";
 
 const router: IRouter = Router();
+
+router.use(requireDevice);
+router.use(rateLimit(generalLimiter));
 
 router.use(healthRouter);
 router.use("/outfits", outfitsRouter);

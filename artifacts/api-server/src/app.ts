@@ -1,13 +1,26 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
+import helmet from "helmet";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { getStripeClient } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
 
+const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
+
 const app: Express = express();
 
+app.use(helmet());
+app.use(cors({
+  origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+  credentials: true,
+}));
+app.use(cookieParser());
 app.use(
   pinoHttp({
     logger,
@@ -28,6 +41,7 @@ app.use(
   }),
 );
 
+// Stripe webhook must receive raw body before json parser
 app.post(
   "/api/stripe/webhook",
   express.raw({ type: "application/json" }),
@@ -61,10 +75,15 @@ app.post(
   },
 );
 
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "100kb" }));
+app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 
 app.use("/api", router);
+
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  logger.error({ err }, "Unhandled error");
+  if (res.headersSent) return;
+  res.status(500).json({ error: "Internal server error" });
+});
 
 export default app;

@@ -1,17 +1,16 @@
 import { Router, type IRouter } from "express";
 import { db, userProfilesTable } from "@workspace/db";
-import { GetProfileQueryParams, UpsertProfileBody } from "@workspace/api-zod";
+import { UpsertProfileBody } from "@workspace/api-zod";
 import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
 router.get("/", async (req, res) => {
   try {
-    const { profileId } = GetProfileQueryParams.parse(req.query);
     const [profile] = await db
       .select()
       .from(userProfilesTable)
-      .where(eq(userProfilesTable.profileId, profileId));
+      .where(eq(userProfilesTable.profileId, req.deviceId));
 
     if (!profile) {
       res.status(404).json({ error: "Profile not found" });
@@ -31,7 +30,7 @@ router.put("/", async (req, res) => {
     const [profile] = await db
       .insert(userProfilesTable)
       .values({
-        profileId: body.profileId,
+        profileId: req.deviceId,
         name: body.name ?? null,
         gender: body.gender ?? null,
         age: body.age ?? null,

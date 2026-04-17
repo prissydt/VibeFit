@@ -20,3 +20,5 @@
 export * from "./outfits";
 export * from "./profiles";
 export * from "./users";
+export * from "./products";
+export * from "./outfitTemplates";
