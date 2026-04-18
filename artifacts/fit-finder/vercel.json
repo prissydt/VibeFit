@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://vibefit-api.up.railway.app/api/:path*"
+    }
+  ]
+}
