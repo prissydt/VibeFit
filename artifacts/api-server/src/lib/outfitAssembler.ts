@@ -35,16 +35,60 @@ export interface AssembledLook {
 }
 
 // ---- Prompt parsing ----
+// Tag vocabulary mirrors scripts/src/catalog/tagInferer.ts — keep in sync.
+// TODO: extract to a shared lib package (lib/tag-utils) to avoid duplication.
 
-const OCCASION_WORDS = ["date", "wedding", "work", "brunch", "party", "interview", "casual", "formal", "gym"];
-const SEASON_WORDS: [string, string[]][] = [
-  ["spring",  ["spring"]],
-  ["summer",  ["summer", "warm", "hot"]],
-  ["autumn",  ["autumn", "fall", "cool"]],
-  ["winter",  ["winter", "cold"]],
+type TagRule = [RegExp, string];
+
+const OCCASION_RULES: TagRule[] = [
+  [/\bdate|evening|dinner|night\b/i,       "date-night"],
+  [/\bwedding|bridal|formal\b/i,           "wedding"],
+  [/\bwork|office|corporate|business\b/i,  "work"],
+  [/\bbrunch|weekend|daytime\b/i,          "brunch"],
+  [/\bparty|cocktail|celebration\b/i,      "party"],
+  [/\binterview\b/i,                       "work"],
+  [/\bcasual|relaxed|everyday\b/i,         "casual"],
+  [/\bgym|active|sport\b/i,               "active"],
+  [/\bbeach|resort|holiday|vacation\b/i,  "holiday"],
 ];
-const COLOR_WORDS = ["black", "white", "red", "blue", "navy", "green", "pink", "neutral", "beige", "burgundy", "brown", "grey", "gray", "cream", "camel"];
-const STYLE_WORDS = ["minimal", "edgy", "romantic", "casual", "elegant", "streetwear", "boho", "classic", "preppy"];
+
+const SEASON_RULES: [string, RegExp][] = [
+  ["spring",  /\bspring|fresh\b/i],
+  ["summer",  /\bsummer|warm|hot|tropical\b/i],
+  ["autumn",  /\bautumn|fall|cool|earthy\b/i],
+  ["winter",  /\bwinter|cold|wool|knit|cosy|cozy\b/i],
+];
+
+const COLOR_RULES: TagRule[] = [
+  [/\bblack\b/i,                     "black"],
+  [/\bwhite|ivory|cream|ecru\b/i,    "white"],
+  [/\bnavy|midnight\b/i,             "navy"],
+  [/\bblue\b/i,                      "blue"],
+  [/\bred|scarlet|crimson\b/i,       "red"],
+  [/\bpink|blush|rose\b/i,           "pink"],
+  [/\bgreen|sage|olive|khaki\b/i,    "green"],
+  [/\bbeige|sand|nude|camel\b/i,     "beige"],
+  [/\bgrey|gray|charcoal\b/i,        "grey"],
+  [/\bbrown|chocolate|tan\b/i,       "brown"],
+  [/\bburgundy|wine|maroon\b/i,      "burgundy"],
+  [/\bneutral|tonal\b/i,             "neutral"],
+];
+
+const STYLE_RULES: TagRule[] = [
+  [/\bminimal|clean|simple\b/i,     "minimal"],
+  [/\bboho|bohemian\b/i,            "boho"],
+  [/\bedgy|leather|moto|rock\b/i,   "edgy"],
+  [/\bromantic|feminine|floral\b/i, "romantic"],
+  [/\bclassic|timeless|tailored\b/i,"classic"],
+  [/\bpreppy|collegiate\b/i,        "preppy"],
+  [/\bstreet.?wear|urban\b/i,       "streetwear"],
+  [/\belegant|luxe|refined\b/i,     "elegant"],
+  [/\bglam|sparkle|sequin\b/i,      "glam"],
+];
+
+function matchTags(text: string, rules: TagRule[]): string[] {
+  return rules.filter(([re]) => re.test(text)).map(([, tag]) => tag);
+}
 
 function currentSeason(): string {
   const month = new Date().getMonth();
@@ -58,16 +102,13 @@ function currentSeason(): string {
 function parsePrompt(prompt: string) {
   const lower = prompt.toLowerCase();
 
-  const occasions = OCCASION_WORDS.filter(w => lower.includes(w));
-  const seasons: string[] = [];
-  for (const [season, keywords] of SEASON_WORDS) {
-    if (keywords.some(k => lower.includes(k))) seasons.push(season);
-  }
-  const colors = COLOR_WORDS.filter(w => lower.includes(w));
-  const styles = STYLE_WORDS.filter(w => lower.includes(w));
+  const occasions = matchTags(lower, OCCASION_RULES);
+  const seasons   = SEASON_RULES.filter(([, re]) => re.test(lower)).map(([s]) => s);
+  const colors    = matchTags(lower, COLOR_RULES);
+  const styles    = matchTags(lower, STYLE_RULES);
 
   if (!occasions.length) occasions.push("casual");
-  if (!seasons.length) seasons.push(currentSeason());
+  if (!seasons.length)   seasons.push(currentSeason());
 
   return { occasions, seasons, colors, styles };
 }
