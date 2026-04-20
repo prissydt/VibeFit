@@ -103,17 +103,20 @@ export function CartDrawer() {
                 </div>
                 
                 <p className="text-[10px] text-muted-foreground text-center">
-                  Items are purchased directly from each retailer's website.
+                  Each item opens on the retailer's website. Allow pop-ups if prompted.
                 </p>
 
                 <div className="flex gap-3">
                   <Button variant="outline" className="flex-1" onClick={clearCart}>
-                    Clear Cart
+                    Clear
                   </Button>
-                  <Button className="flex-1" onClick={() => {
-                    items.forEach(i => window.open(i.item.purchaseUrl, '_blank'));
+                  <Button className="flex-1" onClick={async () => {
+                    for (const i of items) {
+                      window.open(i.item.purchaseUrl, '_blank');
+                      await new Promise(r => setTimeout(r, 300));
+                    }
                   }}>
-                    Buy All ({items.length})
+                    Shop All ({items.length})
                   </Button>
                 </div>
               </div>

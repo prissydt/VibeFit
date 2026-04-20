@@ -35,7 +35,7 @@ export function ItemRow({ item, lookId = "unknown", lookTitle = "Unknown Look" }
   const { addItem } = useCart();
 
   return (
-    <div className="group relative flex items-start gap-4 p-4 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all duration-300">
+    <div className="group relative flex items-start gap-4 px-4 py-4 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all duration-300 border-b border-b-white/5 last:border-b-0">
       <div className="flex-shrink-0 w-12 h-12 rounded-md bg-secondary/50 flex items-center justify-center border border-white/5 group-hover:bg-primary/10 transition-colors">
         <CategoryIcon category={item.category} className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
       </div>
@@ -45,7 +45,7 @@ export function ItemRow({ item, lookId = "unknown", lookTitle = "Unknown Look" }
           <p className="text-xs font-semibold uppercase tracking-wider text-primary truncate">
             {item.brand}
           </p>
-          <span className="text-sm font-medium text-foreground whitespace-nowrap">
+          <span className="text-sm font-medium whitespace-nowrap" style={{ color: '#C8935A' }}>
             {formatPrice(item.price)}
           </span>
         </div>

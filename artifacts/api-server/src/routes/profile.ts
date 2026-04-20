@@ -13,7 +13,8 @@ router.get("/", async (req, res) => {
       .where(eq(userProfilesTable.profileId, req.deviceId));
 
     if (!profile) {
-      res.status(404).json({ error: "Profile not found" });
+      // Return empty profile shape so frontend doesn't error on first load
+      res.json({ profileId: req.deviceId });
       return;
     }
     res.json(profile);

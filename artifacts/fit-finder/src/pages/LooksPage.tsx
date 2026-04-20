@@ -10,7 +10,7 @@ import { useSaveOutfit, useGenerateOutfits } from "@workspace/api-client-react";
 import { profileStore } from "@/lib/profileStore";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Tags, Heart, X, Bookmark, BookmarkCheck, RefreshCw, Sparkles } from "lucide-react";
+import { Tags, Heart, X, Bookmark, BookmarkCheck, RefreshCw, Sparkles, Copy, Check } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -25,6 +25,14 @@ export default function LooksPage() {
   const [refinementPrompt, setRefinementPrompt] = useState("");
   // Increment on each regeneration so React fully remounts cards and ModelView
   const [regenerationKey, setRegenerationKey] = useState(0);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText("https://vybly.online").then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    });
+  };
 
   const { addFullOutfit } = useCart();
   const saveMutation = useSaveOutfit();
@@ -195,6 +203,23 @@ export default function LooksPage() {
               View Saved
             </Button>
           </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="w-full glass-panel rounded-xl p-5 text-center space-y-3"
+          >
+            <p className="text-xs text-muted-foreground uppercase tracking-widest">Love your style?</p>
+            <p className="text-sm text-foreground/80">Share Vybly with a friend</p>
+            <button
+              onClick={handleCopyLink}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-white/30 transition-all"
+            >
+              {linkCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {linkCopied ? "Link copied!" : "Copy vybly.online"}
+            </button>
+          </motion.div>
         </div>
       </Layout>
     );
@@ -202,10 +227,12 @@ export default function LooksPage() {
 
   return (
     <Layout>
-      <div className="flex-1 flex flex-col lg:flex-row w-full h-[calc(100vh-5rem)] overflow-hidden">
+      {/* dvh = dynamic viewport height — shrinks when mobile browser chrome/keyboard appears */}
+      <div className="flex-1 flex flex-col lg:flex-row w-full h-[calc(100dvh-5rem)] overflow-hidden">
         
         {/* Model Panel - Left/Top (Swipeable Stack) */}
-        <div className="w-full lg:w-1/2 h-[60vh] lg:h-full relative bg-secondary overflow-hidden flex items-center justify-center">
+        {/* On small phones (< 700px tall) we clamp to 52vh so the item panel stays visible */}
+        <div className="w-full lg:w-1/2 h-[52vh] min-h-[280px] max-h-[480px] lg:h-full lg:max-h-none relative bg-secondary overflow-hidden flex items-center justify-center">
           
           {/* Card Stack */}
           <div className="absolute inset-4 lg:inset-8 perspective-1000">
@@ -235,8 +262,8 @@ export default function LooksPage() {
             <span className="text-xs font-medium uppercase tracking-widest text-white/50">Look {activeLookIndex + 1} of {looks.length}</span>
           </div>
 
-          {/* Bottom Action Controls */}
-          <div className="absolute bottom-8 left-0 right-0 flex justify-center items-center gap-6 z-20">
+          {/* Bottom Action Controls — mb-safe keeps buttons above the mobile nav bar */}
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-6 z-20 mb-[env(safe-area-inset-bottom)]">
             <button
               onClick={() => handleSkip(activeLookIndex)}
               className="w-16 h-16 rounded-full bg-background/50 backdrop-blur-md border border-white/10 flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors shadow-2xl group"
@@ -261,7 +288,7 @@ export default function LooksPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3 }}
-              className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-12 space-y-8"
+              className="flex-1 overflow-y-auto custom-scrollbar p-6 lg:p-12 space-y-8 pb-24 lg:pb-12"
             >
               {looks[activeLookIndex] && (
                 <>
@@ -305,15 +332,16 @@ export default function LooksPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-lg font-serif">Curated Pieces</h3>
-                    <div className="space-y-2">
+                    <h3 className="text-lg font-serif" style={{ color: '#C8935A' }}>Curated Pieces</h3>
+                    <div className="rounded-lg border border-white/5 bg-white/[0.02] overflow-hidden">
                       {looks[activeLookIndex].items.map((item, idx) => (
                         <ItemRow key={`${looks[activeLookIndex].id}-${idx}`} item={item} lookId={looks[activeLookIndex].id} lookTitle={looks[activeLookIndex].title} />
                       ))}
                     </div>
                   </div>
                   
-                  <div className="h-12"></div>
+                  {/* Bottom spacer — extra breathing room above nav on desktop */}
+                  <div className="h-4 lg:h-12"></div>
                 </>
               )}
             </motion.div>

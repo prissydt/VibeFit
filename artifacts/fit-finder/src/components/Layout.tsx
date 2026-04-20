@@ -25,11 +25,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </Link>
 
           <nav className="hidden md:flex items-center gap-6">
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               className={cn(
                 "text-xs font-medium uppercase tracking-widest transition-colors hover:text-primary",
-                location === "/" ? "text-primary" : "text-muted-foreground"
+                location === "/" || location === "/looks" ? "text-primary" : "text-muted-foreground"
               )}
             >
               Create
@@ -76,7 +76,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile bottom tab bar */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-white/5 bg-background/90 backdrop-blur-xl flex justify-around items-center h-16" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-        <Link href="/" className={cn("flex flex-col items-center gap-0.5 text-[10px] uppercase tracking-widest transition-colors min-w-[44px] min-h-[44px] justify-center", location === "/" ? "text-[#C8935A]" : "text-muted-foreground")}>
+        <Link href="/" className={cn("flex flex-col items-center gap-0.5 text-[10px] uppercase tracking-widest transition-colors min-w-[44px] min-h-[44px] justify-center", location === "/" || location === "/looks" ? "text-[#C8935A]" : "text-muted-foreground")}>
           <Sparkles className="w-5 h-5" />Create
         </Link>
         <Link href="/profile" className={cn("flex flex-col items-center gap-0.5 text-[10px] uppercase tracking-widest transition-colors min-w-[44px] min-h-[44px] justify-center", location.startsWith("/profile") ? "text-[#C8935A]" : "text-muted-foreground")}>

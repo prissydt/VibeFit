@@ -14,10 +14,10 @@ import { cn } from "@/lib/utils";
 
 // Pre-defined prompts for inspiration
 const SUGGESTIONS = [
-  "A moody, dark academia winter look for a coffee shop date",
-  "Sleek minimalist evening wear for a gallery opening",
-  "Edgy streetwear with metallic accents for a concert",
-  "Quiet luxury weekend getaway in Aspen"
+  "A breezy summer look for brunch at a Bondi Beach cafe",
+  "Polished corporate chic for a client meeting in the Melbourne CBD",
+  "Effortless boho layers for a winter weekend market in the Dandenong Ranges",
+  "A glamorous going-out look for a rooftop bar in Sydney on a warm Friday night"
 ];
 
 const BUDGET_OPTIONS = [
@@ -143,6 +143,9 @@ export default function Home() {
         userProfile: profile as any
       }
     }, {
+      onError: () => {
+        setIsGenerating(false);
+      },
       onSuccess: async (data) => {
         // Phase 2: generate all model images in parallel from the client
         setLoadingPhase("images");
@@ -187,7 +190,7 @@ export default function Home() {
           >
             <div className="text-center mb-12 space-y-4">
               <h1 className="text-5xl md:text-7xl font-serif text-gradient">
-                Define Your Aesthetic.
+                Style Your Mood.
               </h1>
               <p className="text-lg text-muted-foreground max-w-xl mx-auto">
                 Describe the exact vibe, occasion, or specific piece you want to style. Our AI will curate complete, shoppable looks instantly.
@@ -365,23 +368,23 @@ export default function Home() {
                   </AnimatePresence>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-2">
-                  <div className="flex flex-wrap gap-2">
-                    {SUGGESTIONS.slice(0, 2).map((s, i) => (
-                      <button 
+                <div className="flex flex-col gap-4 mt-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {SUGGESTIONS.map((s, i) => (
+                      <button
                         key={i}
                         onClick={() => handleSuggestion(s)}
-                        className="text-[10px] uppercase tracking-wider px-3 py-2.5 min-h-[44px] rounded-full border border-white/10 hover:border-primary/50 text-muted-foreground hover:text-primary transition-colors"
+                        className="text-[10px] uppercase tracking-wider px-3 py-2.5 min-h-[44px] rounded-full border border-white/10 hover:border-primary/50 text-muted-foreground hover:text-primary transition-colors text-left"
                       >
-                        {s.split(' ').slice(0, 4).join(' ')}...
+                        {s.split(' ').slice(0, 5).join(' ')}...
                       </button>
                     ))}
                   </div>
-                  <Button 
-                    size="lg" 
+                  <Button
+                    size="lg"
                     onClick={handleGenerate}
                     disabled={!prompt.trim() || isGenerating}
-                    className="w-full sm:w-auto"
+                    className="w-full"
                   >
                     <Sparkles className="w-4 h-4 mr-2" />
                     Generate Looks

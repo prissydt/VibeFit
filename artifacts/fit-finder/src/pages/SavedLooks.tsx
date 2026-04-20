@@ -90,7 +90,7 @@ export default function SavedLooks() {
                     <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
                       <div>
                         <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">Total Value</p>
-                        <p className="text-lg font-light text-foreground">{formatPrice(saved.look.totalCost)}</p>
+                        <p className="text-lg font-light" style={{ color: '#C8935A' }}>{formatPrice(saved.look.totalCost)}</p>
                       </div>
                       <div className="flex items-center gap-2 text-xs font-medium text-primary group-hover:translate-x-1 transition-transform">
                         View Details <ArrowRight className="w-3 h-3" />

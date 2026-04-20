@@ -121,7 +121,7 @@ export function ModelView({ look, userSizes, userProfile }: ModelViewProps) {
                               {item.brand}
                             </p>
                             <h4 className="text-sm font-medium text-white truncate">{item.name}</h4>
-                            <p className="text-xs text-white/60 mt-1">{formatPrice(item.price)}</p>
+                            <p className="text-xs mt-1" style={{ color: '#C8935A' }}>{formatPrice(item.price)}</p>
                           </div>
                         </div>
                         <a 

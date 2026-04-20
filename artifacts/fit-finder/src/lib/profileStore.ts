@@ -16,7 +16,7 @@ function generateId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-const STORAGE_KEY = "fitfinder_profile";
+const STORAGE_KEY = "vybly_profile";
 
 function loadProfile(): UserProfile {
   try {

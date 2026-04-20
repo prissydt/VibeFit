@@ -4,7 +4,7 @@ import { ProfileForm } from "@/components/ProfileForm";
 import { profileStore } from "@/lib/profileStore";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "wouter";
-import { User, RefreshCw, ArrowRight, Image as ImageIcon, Loader2, CreditCard } from "lucide-react";
+import { User, RefreshCw, ArrowRight, Image as ImageIcon, Loader2, CreditCard, BookmarkX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useGetSavedOutfits, useDeleteSavedOutfit, useGetPaymentStatus, useCreateCheckoutSession, useCreateBillingPortalSession } from "@workspace/api-client-react";
 import { formatPrice } from "@/lib/utils";
@@ -102,49 +102,55 @@ export default function ProfilePage() {
             </h2>
           </div>
           
-          <div className="flex flex-wrap gap-4 items-center">
-            {p.gender && (
-              <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium uppercase tracking-wider">
-                {p.gender}
-              </span>
-            )}
-            {p.age && (
-              <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium uppercase tracking-wider">
-                Age: {p.age}
-              </span>
-            )}
-            {p.skinTone && (
-              <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium uppercase tracking-wider flex items-center gap-2">
-                Skin Tone: 
-                <span className="w-4 h-4 rounded-full border border-white/20 inline-block" style={{ backgroundColor: SKIN_TONES[p.skinTone] }} />
-              </span>
-            )}
-          </div>
-          
-          {p.stylePreferences && p.stylePreferences.length > 0 && (
-            <div className="space-y-2">
-              <div className="text-[10px] text-muted-foreground uppercase tracking-widest">Loves</div>
-              <div className="flex flex-wrap gap-2">
-                {p.stylePreferences.map(t => (
-                  <span key={t} className="px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20 text-xs">
-                    {t}
+          {!p.gender && !p.age && !p.skinTone && (!p.stylePreferences || p.stylePreferences.length === 0) && (!p.avoidKeywords || p.avoidKeywords.length === 0) ? (
+            <p className="text-sm text-muted-foreground italic">No profile details yet. Fill in the form below to personalise your looks.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-4 items-center">
+                {p.gender && (
+                  <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium uppercase tracking-wider">
+                    {p.gender}
                   </span>
-                ))}
+                )}
+                {p.age && (
+                  <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium uppercase tracking-wider">
+                    Age: {p.age}
+                  </span>
+                )}
+                {p.skinTone && (
+                  <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium uppercase tracking-wider flex items-center gap-2">
+                    Skin Tone:
+                    <span className="w-4 h-4 rounded-full border border-white/20 inline-block" style={{ backgroundColor: SKIN_TONES[p.skinTone] }} />
+                  </span>
+                )}
               </div>
-            </div>
-          )}
 
-          {p.avoidKeywords && p.avoidKeywords.length > 0 && (
-            <div className="space-y-2">
-              <div className="text-[10px] text-muted-foreground uppercase tracking-widest">Avoids</div>
-              <div className="flex flex-wrap gap-2">
-                {p.avoidKeywords.map(t => (
-                  <span key={t} className="px-2.5 py-1 rounded-md bg-destructive/10 text-destructive border border-destructive/20 text-xs">
-                    {t}
-                  </span>
-                ))}
-              </div>
-            </div>
+              {p.stylePreferences && p.stylePreferences.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-widest">Loves</div>
+                  <div className="flex flex-wrap gap-2">
+                    {p.stylePreferences.map(t => (
+                      <span key={t} className="px-2.5 py-1 rounded-md bg-primary/10 text-primary border border-primary/20 text-xs">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {p.avoidKeywords && p.avoidKeywords.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-widest">Avoids</div>
+                  <div className="flex flex-wrap gap-2">
+                    {p.avoidKeywords.map(t => (
+                      <span key={t} className="px-2.5 py-1 rounded-md bg-destructive/10 text-destructive border border-destructive/20 text-xs">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -157,7 +163,7 @@ export default function ProfilePage() {
                 Payments
               </h2>
               <p className="text-sm text-muted-foreground mt-2">
-                Upgrade to Fit Finder Pro for saved account billing and premium styling features.
+                Upgrade to Vybly Pro for saved account billing and premium styling features.
               </p>
             </div>
             <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs uppercase tracking-wider">
@@ -203,7 +209,9 @@ export default function ProfilePage() {
             </div>
           ) : !savedData?.outfits?.length ? (
             <div className="glass-panel rounded-xl p-10 text-center">
-              <p className="text-muted-foreground text-sm mb-4">No looks saved yet. Generate outfits and tap Save to collect looks here.</p>
+              <BookmarkX className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-serif text-foreground mb-2">No Looks Saved Yet</h3>
+              <p className="text-muted-foreground text-sm mb-6">Generate outfits and tap Save to collect looks here.</p>
               <button
                 onClick={() => setLocation("/")}
                 className="text-xs uppercase tracking-widest font-medium text-primary border-b border-primary pb-1 hover:text-white hover:border-white transition-colors"
