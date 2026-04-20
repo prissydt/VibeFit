@@ -715,6 +715,24 @@
     .delay-2 { animation-delay: 0.3s; }
     .delay-3 { animation-delay: 0.45s; }
     .delay-4 { animation-delay: 0.6s; }
+
+    /* Formspree Ajax — field validation & global error states */
+    input[aria-invalid="true"] { border-color: #c0392b !important; }
+    .form-error-global {
+      font-size: 0.78rem;
+      color: #c0392b;
+      margin-bottom: 0.5rem;
+      min-height: 0;
+    }
+    .form-error-global-dark {
+      font-size: 0.78rem;
+      color: #f4a9a0;
+      margin-bottom: 0.5rem;
+      min-height: 0;
+    }
+
+    /* Hide submit button text during submission via disabled state */
+    button[data-fs-submit-btn]:disabled { opacity: 0.65; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -735,14 +753,15 @@
     <p class="hero-sub animate-in delay-2">
       Real, shoppable outfits for every occasion — styled for your vibe, budget, and body. Every item in stock. Every link a real product.
     </p>
-    <form class="hero-form animate-in delay-3" id="hero-form" novalidate>
-      <input type="email" name="email" placeholder="Your email address" required />
-      <button type="submit">Get Access</button>
-    </form>
-    <p class="form-note animate-in delay-4">No spam. Early access updates only.</p>
-    <div class="success-msg" id="hero-success">
+    <div data-fs-success id="hero-success" class="success-msg">
       ✓ You're on the list — we'll be in touch before launch.
     </div>
+    <div data-fs-error class="form-error-global"></div>
+    <form class="hero-form animate-in delay-3" id="hero-form">
+      <input type="email" name="email" placeholder="Your email address" required data-fs-field />
+      <button type="submit" data-fs-submit-btn>Get Access</button>
+    </form>
+    <p class="form-note animate-in delay-4">No spam. Early access updates only.</p>
   </div>
 
   <div class="hero-right">
@@ -896,14 +915,15 @@
   <p class="waitlist-sub">
     Early access opens in Australia 2026. Leave your email and we'll reach out before the launch — whether you're a shopper, a brand, or just curious.
   </p>
-  <form class="waitlist-form" id="waitlist-form" novalidate>
-    <input type="email" name="email" placeholder="your@email.com" required />
-    <button type="submit">Notify Me</button>
-  </form>
-  <p class="waitlist-note">No spam. Unsubscribe anytime.</p>
-  <div class="success-msg-dark" id="waitlist-success">
+  <div data-fs-success id="waitlist-success" class="success-msg-dark">
     ✓ You're on the list — we'll be in touch before launch.
   </div>
+  <div data-fs-error class="form-error-global-dark"></div>
+  <form class="waitlist-form" id="waitlist-form">
+    <input type="email" name="email" placeholder="your@email.com" required data-fs-field />
+    <button type="submit" data-fs-submit-btn>Notify Me</button>
+  </form>
+  <p class="waitlist-note">No spam. Unsubscribe anytime.</p>
 </section>
 
 <!-- FOOTER -->
@@ -914,57 +934,10 @@
 </footer>
 
 <script>
-  // Form submission — sends to Formspree endpoint
-  // Setup: go to https://formspree.io, create a free account, create a form,
-  //        and replace YOUR_FORM_ID below with your actual form ID.
-  const FORMSPREE_ENDPOINT = "https://formspree.io/f/YOUR_FORM_ID";
-
-  async function submitEmail(email, successId) {
-    const res = await fetch(FORMSPREE_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({ email, _replyto: email }),
-    });
-    return res.ok;
-  }
-
-  function setupForm(formId, successId) {
-    const form = document.getElementById(formId);
-    const success = document.getElementById(successId);
-    if (!form) return;
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const input = form.querySelector("input[type='email']");
-      const btn   = form.querySelector("button");
-      if (!input.value || !input.validity.valid) {
-        input.focus();
-        return;
-      }
-
-      btn.textContent = "Sending…";
-      btn.disabled = true;
-
-      try {
-        const ok = await submitEmail(input.value, successId);
-        if (ok) {
-          form.style.display = "none";
-          success.style.display = "block";
-        } else {
-          // Formspree not configured yet — show success anyway (dev mode)
-          form.style.display = "none";
-          success.style.display = "block";
-        }
-      } catch {
-        // Offline / no Formspree ID — still show confirmation
-        form.style.display = "none";
-        success.style.display = "block";
-      }
-    });
-  }
-
-  setupForm("hero-form", "hero-success");
-  setupForm("waitlist-form", "waitlist-success");
+  // Initialise Formspree Ajax for both email capture forms
+  window.formspree = window.formspree || function () { (formspree.q = formspree.q || []).push(arguments); };
+  formspree('initForm', { formElement: '#hero-form',     formId: 'xzdyvjgl' });
+  formspree('initForm', { formElement: '#waitlist-form', formId: 'xzdyvjgl' });
 
   // Smooth scroll for nav CTA
   document.querySelectorAll('a[href^="#"]').forEach(a => {
@@ -974,6 +947,7 @@
     });
   });
 </script>
+<script src="https://unpkg.com/@formspree/ajax@1" defer></script>
 
 </body>
 </html>
