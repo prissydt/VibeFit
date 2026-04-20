@@ -223,7 +223,7 @@ export default function Home() {
                             setCustomBudget("");
                           }}
                           className={cn(
-                            "px-3 py-1.5 text-xs rounded-full border transition-all",
+                            "px-3 py-2.5 min-h-[44px] text-xs rounded-full border transition-all",
                             maxBudget === opt.value && customBudget === ""
                               ? "bg-primary text-primary-foreground border-primary"
                               : "bg-black/40 border-white/10 hover:border-white/30 text-muted-foreground"
@@ -371,7 +371,7 @@ export default function Home() {
                       <button 
                         key={i}
                         onClick={() => handleSuggestion(s)}
-                        className="text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/10 hover:border-primary/50 text-muted-foreground hover:text-primary transition-colors"
+                        className="text-[10px] uppercase tracking-wider px-3 py-2.5 min-h-[44px] rounded-full border border-white/10 hover:border-primary/50 text-muted-foreground hover:text-primary transition-colors"
                       >
                         {s.split(' ').slice(0, 4).join(' ')}...
                       </button>

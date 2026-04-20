@@ -1,6 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Jost:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 @import "tailwindcss";
 
+/* Safe area support for notched phones */
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
 @theme inline {
   --color-background: hsl(15 15% 4%);
   --color-foreground: hsl(30 20% 96%);
@@ -32,6 +38,7 @@
 
   --font-sans: 'Jost', sans-serif;
   --font-serif: 'Cormorant Garamond', serif;
+  --gold: #C8935A;
 
   --radius-lg: 0.5rem;
   --radius-md: 0.375rem;

@@ -31,12 +31,30 @@ export default function LooksPage() {
   const generateMutation = useGenerateOutfits();
 
   useEffect(() => {
-    if (!data || !data.looks || data.looks.length === 0) {
-      setLocation("/");
-    }
+    if (!data) setLocation("/");
   }, [data, setLocation]);
 
-  if (!data || !data.looks || data.looks.length === 0) return null;
+  if (!data) return null;
+
+  // Catalog returned no results — show friendly error instead of blank screen
+  if (!data.looks || data.looks.length === 0) {
+    return (
+      <Layout>
+        <div className="flex-1 flex flex-col items-center justify-center p-6 w-full max-w-lg mx-auto text-center space-y-6">
+          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="space-y-3">
+            <Sparkles className="w-12 h-12 text-muted-foreground mx-auto opacity-40" />
+            <h2 className="text-3xl font-serif">No looks found</h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              We couldn't find products matching your vibe right now. Try a different prompt, adjust your budget, or check back soon as we add more items.
+            </p>
+          </motion.div>
+          <Button className="w-full max-w-xs h-11" onClick={() => setLocation("/")}>
+            Try a different vibe
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   const looks = data.looks;
   const isDone = activeLookIndex >= looks.length;

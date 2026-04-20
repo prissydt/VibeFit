@@ -74,8 +74,10 @@ function getHotspotsForLook(items: ItemWithCategory[]) {
 router.post("/generate", rateLimit(generateLimiter), async (req, res) => {
   try {
     const body = GenerateOutfitsBody.parse(req.body);
-    const numLooks = body.numLooks ?? 4;
-    const maxBudget = body.maxBudget as number | undefined;
+    const numLooks = Math.min(Math.max(1, body.numLooks ?? 4), 8);
+    const maxBudget = body.maxBudget != null
+      ? Math.min(Math.max(1, body.maxBudget as number), 100_000)
+      : undefined;
     const userSizes = body.userSizes as { top?: string; bottom?: string; shoes?: string; dress?: string } | undefined;
     const profile = body.userProfile as {
       gender?: string; age?: number; skinTone?: string; location?: string;
@@ -128,7 +130,13 @@ router.post("/model-image", rateLimit(modelImageLimiter), async (req, res) => {
       topSize: userSizes?.top,
     });
 
-    const imageBuffer = await generateImageBuffer(imagePrompt, "1024x1536");
+    const IMAGE_TIMEOUT_MS = 45_000;
+    const imageBuffer = await Promise.race([
+      generateImageBuffer(imagePrompt, "1024x1536"),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Image generation timed out")), IMAGE_TIMEOUT_MS)
+      ),
+    ]);
     const b64 = imageBuffer.toString("base64");
     const hotspots = getHotspotsForLook(look.items);
 
